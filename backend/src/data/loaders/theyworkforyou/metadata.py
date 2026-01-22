@@ -23,6 +23,8 @@ class Metadata:
         self.MEMBERSHIPS_PATH = os.path.join(self.metadata_dir, "people.json") # Note: same file as people.
         self.VOTES_PATH = os.path.join(self.metadata_dir, "votes.parquet")
         self.DIVISIONS_PATH = os.path.join(self.metadata_dir, "divisions.parquet")
+        self.POLICIES_PATH = os.path.join(self.metadata_dir, "policies.json")
+        self.POLICY_CALCS_PATH = os.path.join(self.metadata_dir, "policy_calc_to_load.parquet")
         self.PEOPLE_REQUIRED_COLUMNS = [
             "id",
             "given_name",
@@ -51,6 +53,40 @@ class Metadata:
             "membership_id",
             "vote",
         ]
+        self.MP_POLICY_SUMMARY_REQUIRED_COLUMNS = [
+            "person_id",
+            "policy_id",
+            "period_id",
+            "name",
+            "policy_description",
+            "context_description",
+            "distance_score",
+            "start_year",
+            "end_year",
+            "num_votes_same",
+            "num_strong_votes_same",
+            "num_votes_different",
+            "num_strong_votes_different",
+            "num_votes_absent",
+            "num_strong_votes_absent",
+            "num_votes_abstain",
+            "num_strong_votes_abstain",
+            "division_ids",
+            "mp_policy_alignment_score",
+            "mp_stance_label",
+        ]
+
+    def _load_json(self, path: str) -> dict | list:
+        """Load JSON data from a file.
+
+        Args:
+            path: Path to the JSON file.
+
+        Returns:
+            Parsed JSON data.
+        """
+        with open(path, "r") as f:
+            return json.load(f)
 
     def load_memberships(self) -> pd.DataFrame:
         """Load and normalise memberships data from TheyWorkForYou.
@@ -59,9 +95,7 @@ class Metadata:
             DataFrame with columns: membership_id, person_id, party, post_id,
             start_date, end_date, start_reason, end_reason, historichansard_id.
         """
-        with open(self.MEMBERSHIPS_PATH, "r") as f:
-            data = json.load(f)
-
+        data = self._load_json(self.MEMBERSHIPS_PATH)
         memberships = data["memberships"]
         df = pd.DataFrame(memberships)
 
@@ -197,9 +231,7 @@ class Metadata:
         Returns:
             DataFrame with columns: id, given_name, family_name, display_name.
         """
-        with open(self.PEOPLE_PATH, "r") as f:
-            data = json.load(f)
-
+        data = self._load_json(self.PEOPLE_PATH)
         people = data["persons"]
         people = pd.DataFrame(people)
         people = people[~people["other_names"].isnull()] # Remove records without a name.
@@ -215,5 +247,59 @@ class Metadata:
 
         return people[self.PEOPLE_REQUIRED_COLUMNS]
 
+    def _score_to_stance_label(self, score: float) -> str:
+        """Convert alignment score to stance label.
 
+        Args:
+            score: Alignment score from 0-100.
 
+        Returns:
+            Human-readable stance label.
+        """
+        if score >= 95:
+            return "consistently voted for"
+        elif score >= 85:
+            return "almost always voted for"
+        elif score >= 60:
+            return "generally voted for"
+        elif score >= 40:
+            return "voted a mixture of for and against"
+        elif score >= 15:
+            return "generally voted against"
+        elif score >= 5:
+            return "almost always voted against"
+        else:
+            return "consistently voted against"
+
+    def load_mp_policy_summaries(self) -> pd.DataFrame:
+        """Load MP policy alignment summaries.
+
+        Joins policy_calc_to_load.parquet with policies.json and computes
+        derived alignment scores and stance labels.
+
+        Returns:
+            DataFrame with columns matching MP_POLICY_SUMMARY_REQUIRED_COLUMNS.
+        """
+        policies = self._load_json(self.POLICIES_PATH)
+        policies_df = pd.DataFrame(policies)[["id", "name", "policy_description", "context_description"]]
+        policies_df = policies_df.rename(columns={"id": "policy_id"})
+
+        # Load policy calculations
+        calcs_df = pd.read_parquet(self.POLICY_CALCS_PATH)
+
+        # Join on policy_id
+        df = calcs_df.merge(policies_df, on="policy_id", how="left")
+
+        # Compute derived fields
+        df["mp_policy_alignment_score"] = (1 - df["distance_score"]) * 100
+        df["mp_stance_label"] = df["mp_policy_alignment_score"].apply(self._score_to_stance_label)
+
+        # Convert division_ids from numpy.int64 to native Python int
+        df["division_ids"] = df["division_ids"].apply(
+            lambda x: [int(i) for i in x] if isinstance(x, (list, np.ndarray)) else x
+        )
+
+        # Replace NaN with None for DB insertion
+        df.replace({np.nan: None}, inplace=True)
+
+        return df[self.MP_POLICY_SUMMARY_REQUIRED_COLUMNS]

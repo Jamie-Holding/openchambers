@@ -1,7 +1,8 @@
 """SQLAlchemy ORM models for Hansard data."""
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Column, Date, ForeignKey, Integer, String, Text
+from sqlalchemy import Column, Date, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -155,3 +156,31 @@ class Vote(Base):
     vote = Column(String, nullable=False)  # 'absent', 'aye', 'no', 'abstain'
 
     division = relationship("Division", back_populates="votes")
+
+
+class MPPolicySummary(Base):
+    """Summary of an MP's voting alignment with a policy."""
+
+    __tablename__ = "mp_policy_summary"
+
+    id = Column(Integer, primary_key=True, index=True)
+    person_id = Column(Integer, nullable=False, index=True)
+    policy_id = Column(Integer, nullable=False, index=True)
+    period_id = Column(Integer, nullable=True)
+    name = Column(String, nullable=True)
+    policy_description = Column(Text, nullable=True)
+    context_description = Column(Text, nullable=True)
+    distance_score = Column(Float, nullable=False)
+    start_year = Column(Integer, nullable=True)
+    end_year = Column(Integer, nullable=True)
+    num_votes_same = Column(Integer, nullable=False)
+    num_strong_votes_same = Column(Integer, nullable=False)
+    num_votes_different = Column(Integer, nullable=False)
+    num_strong_votes_different = Column(Integer, nullable=False)
+    num_votes_absent = Column(Integer, nullable=False)
+    num_strong_votes_absent = Column(Integer, nullable=False)
+    num_votes_abstain = Column(Integer, nullable=False)
+    num_strong_votes_abstain = Column(Integer, nullable=False)
+    division_ids = Column(ARRAY(Integer), nullable=True)
+    mp_policy_alignment_score = Column(Float, nullable=False)
+    mp_stance_label = Column(String, nullable=False)

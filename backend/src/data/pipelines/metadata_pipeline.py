@@ -33,6 +33,7 @@ class MetadataPipeline:
         memberships_df = self.loader.load_memberships()
         divisions_df = self.loader.load_divisions()
         votes_df = self.loader.load_votes()
+        mp_policy_summaries_df = self.loader.load_mp_policy_summaries()
 
         # Insert into database
         logger.info("Truncating metadata tables...")
@@ -49,6 +50,9 @@ class MetadataPipeline:
 
         logger.info(f"Inserting {len(votes_df)} votes...")
         self.repository.insert_votes(votes_df, division_key_to_id)
+
+        logger.info(f"Inserting {len(mp_policy_summaries_df)} MP policy summaries...")
+        self.repository.insert_mp_policy_summaries(mp_policy_summaries_df)
 
         logger.info("Updating party_at_time in utterances...")
         self.repository.update_party_at_time()
