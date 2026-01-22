@@ -20,7 +20,7 @@ class Utterance(Base):
     embedding_text = Column(Text, nullable=False)
 
     speakername = Column(String, nullable=False)
-    person_id = Column(String, nullable=True)
+    person_id = Column(Integer, nullable=True)
     speakeroffice = Column(String, nullable=True)
 
     oral_heading = Column(Text, nullable=True)
@@ -93,3 +93,65 @@ class Embedding(Base):
     embedding = Column(Vector(EMBEDDING_DIM))
 
     chunk = relationship("UtteranceChunk", back_populates="embedding")
+
+
+class Person(Base):
+    """A person who has spoken in Parliament."""
+    __tablename__ = "person"
+
+    id = Column(Integer, primary_key=True)
+    given_name = Column(String, nullable=True)
+    family_name = Column(String, nullable=True)
+    display_name = Column(String, nullable=False)
+
+
+class Membership(Base):
+    """A continuous parliamentary membership (party + seat) for a person."""
+    __tablename__ = "membership"
+
+    membership_id = Column(String, primary_key=True, index=True)
+    person_id = Column(Integer, index=True, nullable=False)
+
+    # Party during this membership (e.g. labour, conservative).
+    party = Column(String, index=True, nullable=True)
+
+    # Constituency (Commons) or seat (Lords).
+    post_id = Column(String, index=True, nullable=True)
+
+    # Date range this membership was valid.
+    start_date = Column(Date, nullable=True)
+    end_date = Column(Date, nullable=True)
+
+    # Why the membership started / ended.
+    start_reason = Column(String, nullable=True)
+    end_reason = Column(String, nullable=True)
+
+    # Legacy Hansard identifier (useful for joins).
+    historichansard_id = Column(String, index=True, nullable=True)
+
+
+class Division(Base):
+    """A parliamentary division (a vote event)."""
+    __tablename__ = "division"
+
+    id = Column(Integer, primary_key=True, index=True)
+    division_key = Column(String, unique=True, nullable=False, index=True)
+    vote_date = Column(Date, nullable=False)
+    description = Column(Text, nullable=False)
+
+    votes = relationship("Vote", back_populates="division", cascade="all, delete-orphan")
+
+
+class Vote(Base):
+    """An individual MP's vote in a parliamentary division."""
+    __tablename__ = "vote"
+
+    id = Column(Integer, primary_key=True, index=True)
+    division_id = Column(
+        Integer, ForeignKey("division.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    person_id = Column(Integer, nullable=False, index=True)
+    membership_id = Column(String, nullable=False)
+    vote = Column(String, nullable=False)  # 'absent', 'aye', 'no', 'abstain'
+
+    division = relationship("Division", back_populates="votes")

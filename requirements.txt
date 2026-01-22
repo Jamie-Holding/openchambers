@@ -43,6 +43,7 @@ pillow==12.1.0
 psycopg==3.3.2
 psycopg-pool==3.3.0
 psycopg2-binary==2.9.11
+pyarrow==23.0.0
 pydantic==2.12.5
 pydantic_core==2.41.5
 python-dateutil==2.9.0.post0
