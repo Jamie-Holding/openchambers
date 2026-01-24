@@ -16,3 +16,5 @@ EMBEDDING_MODEL_NAME = os.getenv(
     "EMBEDDING_MODEL_NAME",
     "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
 )
+AGENT_MODEL_NAME = os.getenv("AGENT_MODEL_NAME", "gpt-4o-mini")
+AGENT_DEBUG = os.getenv("AGENT_DEBUG", "false").lower() == "true"
