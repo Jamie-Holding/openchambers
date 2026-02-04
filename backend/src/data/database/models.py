@@ -182,5 +182,5 @@ class MPPolicySummary(Base):
     num_votes_abstain = Column(Integer, nullable=False)
     num_strong_votes_abstain = Column(Integer, nullable=False)
     division_ids = Column(ARRAY(Integer), nullable=True)
-    mp_policy_alignment_score = Column(Float, nullable=False)
+    mp_policy_alignment_score = Column(Float, nullable=True)
     mp_stance_label = Column(String, nullable=False)

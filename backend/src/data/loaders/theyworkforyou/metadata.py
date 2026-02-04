@@ -247,15 +247,42 @@ class Metadata:
 
         return people[self.PEOPLE_REQUIRED_COLUMNS]
 
-    def _score_to_stance_label(self, score: float) -> str:
+    def _calculate_alignment_score(
+        self,
+        num_votes_same: int,
+        num_strong_votes_same: int,
+        num_votes_different: int,
+        num_strong_votes_different: int,
+    ) -> float | None:
+        """Calculate MP policy alignment score from voting counts.
+
+        Args:
+            num_votes_same: Number of votes aligned with policy.
+            num_strong_votes_same: Number of strong votes aligned with policy.
+            num_votes_different: Number of votes against policy.
+            num_strong_votes_different: Number of strong votes against policy.
+
+        Returns:
+            Alignment score from 0-100, or None if no votes cast.
+        """
+        votes_for_policy = num_votes_same + num_strong_votes_same
+        votes_against_policy = num_votes_different + num_strong_votes_different
+        total_cast_votes = votes_for_policy + votes_against_policy
+        if total_cast_votes == 0:
+            return None
+        return (votes_for_policy / total_cast_votes) * 100
+
+    def _score_to_stance_label(self, score: float | None) -> str:
         """Convert alignment score to stance label.
 
         Args:
-            score: Alignment score from 0-100.
+            score: Alignment score from 0-100, or None if no votes.
 
         Returns:
             Human-readable stance label.
         """
+        if pd.isna(score):
+            return "No voting evidence"
         if score >= 95:
             return "consistently voted for"
         elif score >= 85:
@@ -268,8 +295,10 @@ class Metadata:
             return "generally voted against"
         elif score >= 5:
             return "almost always voted against"
-        else:
+        elif score >= -1:
             return "consistently voted against"
+        else:
+            raise ValueError(f"Unexpected alignment score detected: {score}")
 
     def load_mp_policy_summaries(self) -> pd.DataFrame:
         """Load MP policy alignment summaries.
@@ -291,7 +320,15 @@ class Metadata:
         df = calcs_df.merge(policies_df, on="policy_id", how="left")
 
         # Compute derived fields
-        df["mp_policy_alignment_score"] = (1 - df["distance_score"]) * 100
+        df["mp_policy_alignment_score"] = df.apply(
+            lambda row: self._calculate_alignment_score(
+                row["num_votes_same"],
+                row["num_strong_votes_same"],
+                row["num_votes_different"],
+                row["num_strong_votes_different"],
+            ),
+            axis=1,
+        )
         df["mp_stance_label"] = df["mp_policy_alignment_score"].apply(self._score_to_stance_label)
 
         # Convert division_ids from numpy.int64 to native Python int
