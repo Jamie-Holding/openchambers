@@ -239,6 +239,12 @@ This project uses open data from:
 
 All data is made available under open licenses by these organizations. This project is not affiliated with TheyWorkForYou or mySociety.
 
+## Future improvements
+- Hybrid retrieval: add a lexical search component and fuse its scores with vector search results.
+- Formalise evaluation: build a small labelled query set and measure retrieval quality (Precision@k / Recall@k / nDCG).
+- Reduce retrieval-led hallucinations: tune similarity thresholds and add a reranking step (cross-encoder or LLM-judge) prior to generation.
+- Context management: cap and/or summarise chat history and retrieved context to stay within token limits.
+
 ## License
 
 MIT
