@@ -18,7 +18,7 @@ llm = ChatOpenAI(
     top_p=1.0,
 )
 
-hansard_tool = HansardRetrievalTool(model_name=EMBEDDING_MODEL_NAME, top_k=15, min_similarity=0.1)
+hansard_tool = HansardRetrievalTool(model_name=EMBEDDING_MODEL_NAME, top_k=10, min_similarity=0.1)
 
 
 def create_hansard_agent(checkpointer: BaseCheckpointSaver) -> CompiledStateGraph:
