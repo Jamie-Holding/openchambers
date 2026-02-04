@@ -131,7 +131,6 @@ class HansardRetrievalTool:
             List of structured dicts containing matching Hansard utterances,
             or an empty list if no results were found.
         """
-
         embedding = self.model.encode([query], convert_to_numpy=True)[0]
 
         results = self._vector_search(
@@ -239,6 +238,8 @@ class HansardRetrievalTool:
         """
         Fetch an MP's voting record on a policy area for a given person_id and search_term,
         using the latest available period_id *within that filtered subset*.
+
+        IMPORTANT: search_term should be one keyword only.
         """
         with Session(self.engine) as session:
             # Latest period for THIS person + THIS search term filter
