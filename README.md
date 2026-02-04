@@ -138,7 +138,7 @@ The application will automatically create tables and indexes on first run.
 cp .env.example .env
 ```
 
-Edit `backend/.env` with your database credentials and OpenAI key:
+Edit `.env` with your database credentials and OpenAI key:
 ```
 DATABASE_URL=postgresql+psycopg://hansard_user:your_password@localhost:5432/hansard
 OPENAI_API_KEY=sk-...
@@ -172,8 +172,6 @@ rsync -az --progress --exclude '.svn' --exclude 'tmp/' \
 
 **Metadata files:**
 ```bash
-mkdir -p backend/data/hansard/metadata
-
 curl -L -o backend/data/hansard/metadata/people.json \
   https://raw.githubusercontent.com/mysociety/parlparse/master/members/people.json
 
