@@ -5,11 +5,18 @@ from collections.abc import AsyncIterator
 from langchain.agents import create_agent
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph.state import CompiledStateGraph
+from langchain_openai import ChatOpenAI
 
 from backend.config.settings import AGENT_DEBUG, AGENT_MODEL_NAME, EMBEDDING_MODEL_NAME
 from backend.src.chatbot.prompt import AGENT_PROMPT
 from backend.src.chatbot.tools import HansardRetrievalTool
 
+
+llm = ChatOpenAI(
+    model=AGENT_MODEL_NAME,
+    temperature=0.0,
+    top_p=1.0,
+)
 
 hansard_tool = HansardRetrievalTool(model_name=EMBEDDING_MODEL_NAME, top_k=15, min_similarity=0.1)
 
@@ -19,7 +26,7 @@ def create_hansard_agent(checkpointer: BaseCheckpointSaver) -> CompiledStateGrap
     system_prompt = AGENT_PROMPT.format(parties=parties_str)
 
     graph = create_agent(
-        model=AGENT_MODEL_NAME,
+        model=llm,
         tools=[
             hansard_tool.fetch,
             hansard_tool.list_people,
