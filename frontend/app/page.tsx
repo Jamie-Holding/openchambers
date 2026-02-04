@@ -75,11 +75,11 @@ export default function HansardChat() {
     <div className="flex flex-col h-screen bg-[#F9F7F2] text-stone-800">
       <header className="py-4 px-6 border-b border-stone-200 bg-[#F9F7F2]/80 backdrop-blur-md sticky top-0 z-10 flex justify-between items-center font-serif">
         <h1 className="text-lg font-semibold tracking-tight text-stone-900">
-          Hansard <span className="italic font-normal text-stone-500 text-base ml-1">Digital Archive</span>
+          OpenChambers <span className="italic font-normal text-stone-500 text-base ml-1">Research Assistant</span>
         </h1>
         <div className="flex items-center gap-4">
           <span className="text-[10px] uppercase tracking-[0.2em] text-stone-400 font-sans font-medium hidden sm:block">
-            2024 Session Records
+            Parliamentary Records
           </span>
           <button
             onClick={handleNewInquiry}
@@ -94,12 +94,12 @@ export default function HansardChat() {
         <div className="max-w-3xl mx-auto space-y-10">
           {messages.length === 0 && (
             <div className="h-[40vh] flex flex-col items-center justify-center text-center space-y-4 animate-in fade-in duration-700">
-              <div className="w-12 h-12 bg-stone-200 rounded-full flex items-center justify-center mb-2">
-                <span className="text-stone-500 text-xl font-serif">H</span>
+              <div className="px-4 py-2 bg-stone-200 rounded-full flex items-center justify-center mb-2">
+                <span className="text-stone-500 text-sm font-serif tracking-wide">OpenChambers</span>
               </div>
-              <h2 className="text-xl font-serif text-stone-700 italic">How may I assist your research today?</h2>
-              <p className="text-sm text-stone-400 font-sans max-w-xs leading-relaxed">
-                Query parliamentary debates, MP statements, and official records from the 2024 session.
+              <h2 className="text-2xl font-serif text-stone-700 italic">How may I assist your research today?</h2>
+              <p className="text-base text-stone-400 font-sans max-w-sm leading-relaxed">
+                Query parliamentary debates, MP statements and voting records.
               </p>
             </div>
           )}
@@ -133,7 +133,7 @@ export default function HansardChat() {
             className="w-full pl-6 pr-16 py-4 bg-white border border-stone-200 rounded-[1.5rem] shadow-sm focus:outline-none focus:ring-1 focus:ring-stone-300 transition-all text-stone-800 placeholder-stone-400 font-sans"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Inquire about Hansard records..."
+            placeholder="Inquire about parliamentary records..."
             disabled={isLoading}
           />
           <button

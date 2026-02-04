@@ -15,8 +15,8 @@ const ebGaramond = EB_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "Hansard AI | Digital Archive Explorer",
-  description: "Advanced AI search for UK Parliamentary records and MP statements.",
+  title: "OpenChambers | Parliamentary Research Assistant",
+  description: "AI-powered search for UK parliamentary debates, MP statements and voting records.",
 };
 
 export default function RootLayout({
