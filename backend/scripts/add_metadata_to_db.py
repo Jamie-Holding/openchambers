@@ -1,6 +1,6 @@
 import logging
 
-from backend.src.data.db import init_db, reset_db
+from backend.src.data.db import init_db, reset_metadata_tables
 from backend.src.data.database.metadata import MetadataRepository
 from backend.src.data.pipelines.metadata_pipeline import MetadataPipeline
 
@@ -14,11 +14,6 @@ logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
     logger.info("Starting metadata ingestion pipeline...")
-
-    # -----------------------------------------------------
-    # Configuration
-    # -----------------------------------------------------
-    RESET_DATABASE = False  # Set True to drop all tables and start fresh
 
     # -----------------------------------------------------
     # Initialize the database engine
@@ -39,14 +34,9 @@ if __name__ == "__main__":
     )
 
     # -----------------------------------------------------
-    # Reset DB if needed
+    # Reset metadata tables and run pipeline
     # -----------------------------------------------------
-    if RESET_DATABASE:
-        reset_db(drop=True)
-
-    # -----------------------------------------------------
-    # Run pipeline
-    # -----------------------------------------------------
+    reset_metadata_tables()
     pipeline.run()
 
     logger.info("Metadata ingestion pipeline completed.")

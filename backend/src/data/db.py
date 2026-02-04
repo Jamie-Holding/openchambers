@@ -5,7 +5,14 @@ import logging
 from sqlalchemy import Engine, create_engine, text
 
 from backend.config.settings import DATABASE_URL
-from backend.src.data.database.models import Base
+from backend.src.data.database.models import (
+    Base,
+    Division,
+    Membership,
+    MPPolicySummary,
+    Person,
+    Vote,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -67,4 +74,24 @@ def reset_db(drop: bool = True) -> None:
 
         conn.commit()
         logger.info("Indexes created.")
+
+
+def reset_metadata_tables() -> None:
+    """Drop and recreate metadata tables only (person, membership, division, vote, mp_policy_summary).
+
+    This preserves other tables like utterances and embeddings while allowing
+    schema changes to metadata tables.
+    """
+    engine = init_db()
+    metadata_tables = [MPPolicySummary, Vote, Division, Membership, Person]
+
+    # Drop tables in order (respecting foreign key constraints)
+    for table in metadata_tables:
+        table.__table__.drop(engine, checkfirst=True)
+    logger.info("Metadata tables dropped.")
+
+    # Recreate tables
+    for table in reversed(metadata_tables):
+        table.__table__.create(engine, checkfirst=True)
+    logger.info("Metadata tables recreated.")
 
