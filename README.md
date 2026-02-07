@@ -104,7 +104,7 @@ openchambers/
 ### Prerequisites
 
 - Python 3.10+
-- PostgreSQL 13+ with [pgvector](https://github.com/pgvector/pgvector) extension
+- PostgreSQL 17+ with [pgvector](https://github.com/pgvector/pgvector) and [pg_textsearch](https://github.com/timescale/pg_textsearch) extensions
 - Node.js 18+ (for frontend)
 - OpenAI API key
 
@@ -122,12 +122,23 @@ brew install pgvector
 
 For other platforms, see the [pgvector installation guide](https://github.com/pgvector/pgvector#installation).
 
+**Install pg_textsearch extension** (for BM25 lexical search):
+
+```bash
+# Download the pre-built .deb (adjust PG version and architecture as needed)
+wget https://github.com/timescale/pg_textsearch/releases/download/v0.5.0/pg-textsearch-postgresql-18_0.5.0-1_amd64.deb
+sudo dpkg -i pg-textsearch-postgresql-18_0.5.0-1_amd64.deb
+```
+
+For other platforms, see the [pg_textsearch releases](https://github.com/timescale/pg_textsearch/releases).
+
 **Create the database and user:**
 
 ```bash
 sudo -u postgres psql -c "CREATE USER hansard_user WITH PASSWORD 'your_password';"
 sudo -u postgres psql -c "CREATE DATABASE hansard OWNER hansard_user;"
 sudo -u postgres psql -d hansard -c "CREATE EXTENSION vector;"
+sudo -u postgres psql -d hansard -c "CREATE EXTENSION pg_textsearch;"
 ```
 
 The application will automatically create tables and indexes on first run.

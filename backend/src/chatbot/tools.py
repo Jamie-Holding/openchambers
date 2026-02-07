@@ -31,32 +31,39 @@ class HansardRetrievalTool:
         self.engine = init_db()
         self.parties = self._fetch_parties()
 
-    def _vector_search(
+    def _chunk_search(
         self,
-        query_embedding: np.ndarray,
+        score_expr,
         party: str | None = None,
         person_id: int | None = None,
         date_from: str | None = None,
         date_to: str | None = None,
-        min_similarity: float | None = None,
+        extra_join: tuple | None = None,
+        min_score: float | None = None,
     ) -> list[Utterance]:
-        """Search chunks and return distinct parent utterances.
+        """Score chunks, deduplicate by utterance, filter, and return results.
 
-        Searches against chunk embeddings but returns the full parent
-        utterance for exact quoting. Deduplicates results so multiple
-        matching chunks from the same utterance only return it once.
+        Builds a subquery that finds the best (minimum) score per utterance,
+        then joins to the Utterance table with optional filters. Both vector
+        and BM25 search use this method — they differ only in score_expr
+        and extra_join.
 
         Args:
-            query_embedding: The query vector to search against.
-            party: Filter by political party.
+            score_expr: SQLAlchemy expression scoring each chunk. Must return
+                negative scores where lower = better match (convention shared
+                by pgvector ``<#>`` and pg_textsearch ``<@>``).
+            party: Filter by political party (case-insensitive).
             person_id: Filter by speaker's person ID.
             date_from: Filter by minimum date (inclusive).
             date_to: Filter by maximum date (inclusive).
-            min_similarity: Minimum cosine similarity threshold (0 to 1).
-                Results below this threshold are excluded.
+            extra_join: Optional ``(target, onclause)`` tuple for an
+                additional JOIN in the scoring subquery (e.g. to the
+                Embedding table for vector search).
+            min_score: Optional maximum score threshold. Results with
+                best_score > min_score are excluded.
 
         Returns:
-            List of Utterance objects ordered by semantic similarity.
+            List of Utterance objects ordered by relevance.
         """
         with Session(self.engine) as session:
             conditions = []
@@ -73,20 +80,16 @@ class HansardRetrievalTool:
             if date_to:
                 conditions.append(Utterance.date <= date_to)
 
-            # Subquery: find best (minimum) distance per utterance
-            best_chunks = (
-                select(
-                    UtteranceChunk.utterance_id,
-                    func.min(
-                        Embedding.embedding.op("<#>")(query_embedding)
-                    ).label("best_distance"),
-                )
-                .join(Embedding, Embedding.chunk_id == UtteranceChunk.id)
-                .group_by(UtteranceChunk.utterance_id)
-                .subquery()
+            # Subquery: find best (minimum) score per utterance
+            sub_stmt = select(
+                UtteranceChunk.utterance_id,
+                func.min(score_expr).label("best_score"),
             )
+            if extra_join is not None:
+                sub_stmt = sub_stmt.join(*extra_join)
+            best_chunks = sub_stmt.group_by(UtteranceChunk.utterance_id).subquery()
 
-            # Main query: join utterances to their best distances
+            # Main query: join utterances to their best scores
             stmt = select(Utterance).join(
                 best_chunks, best_chunks.c.utterance_id == Utterance.id
             )
@@ -94,15 +97,75 @@ class HansardRetrievalTool:
             if conditions:
                 stmt = stmt.where(and_(*conditions))
 
-            # Filter by minimum similarity threshold
-            # <#> returns negative inner product, so distance = -similarity
-            effective_min_sim = min_similarity if min_similarity is not None else self.min_similarity
-            if effective_min_sim is not None:
-                stmt = stmt.where(best_chunks.c.best_distance <= literal(-effective_min_sim))
+            if min_score is not None:
+                stmt = stmt.where(best_chunks.c.best_score <= min_score)
 
-            stmt = stmt.order_by(best_chunks.c.best_distance).limit(self.top_k)
+            stmt = stmt.order_by(best_chunks.c.best_score).limit(self.top_k)
 
             return list(session.execute(stmt).scalars().all())
+
+    def _vector_search(
+        self,
+        query_embedding: np.ndarray,
+        party: str | None = None,
+        person_id: int | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        min_similarity: float | None = None,
+    ) -> list[Utterance]:
+        """Search using vector similarity (pgvector).
+
+        Args:
+            query_embedding: The query vector to search against.
+            party: Filter by political party.
+            person_id: Filter by speaker's person ID.
+            date_from: Filter by minimum date (inclusive).
+            date_to: Filter by maximum date (inclusive).
+            min_similarity: Minimum cosine similarity threshold (0 to 1).
+                Results below this threshold are excluded.
+
+        Returns:
+            List of Utterance objects ordered by semantic similarity.
+        """
+        effective_min_sim = min_similarity if min_similarity is not None else self.min_similarity
+        return self._chunk_search(
+            score_expr=Embedding.embedding.op("<#>")(query_embedding),
+            party=party,
+            person_id=person_id,
+            date_from=date_from,
+            date_to=date_to,
+            extra_join=(Embedding, Embedding.chunk_id == UtteranceChunk.id),
+            min_score=literal(-effective_min_sim) if effective_min_sim is not None else None,
+        )
+
+    def _bm25_search(
+        self,
+        query: str,
+        party: str | None = None,
+        person_id: int | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+    ) -> list[Utterance]:
+        """Search using BM25 lexical matching (pg_textsearch).
+
+        Args:
+            query: The search query text.
+            party: Filter by political party.
+            person_id: Filter by speaker's person ID.
+            date_from: Filter by minimum date (inclusive).
+            date_to: Filter by maximum date (inclusive).
+
+        Returns:
+            List of Utterance objects ordered by BM25 relevance.
+        """
+        bm25_query = func.to_bm25query(query, literal("utterance_chunk_bm25_idx"))
+        return self._chunk_search(
+            score_expr=UtteranceChunk.chunk_text.op("<@>")(bm25_query),
+            party=party,
+            person_id=person_id,
+            date_from=date_from,
+            date_to=date_to,
+        )
 
     def fetch(
         self,
@@ -140,6 +203,41 @@ class HansardRetrievalTool:
             date_from=date_from,
             date_to=date_to,
             min_similarity=min_similarity,
+        )
+
+        return [self._format_search_result(utt) for utt in results]
+
+    def fetch_bm25(
+        self,
+        query: str,
+        party: str | None = None,
+        person_id: int | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+    ) -> list[dict[str, object]]:
+        """Fetch and format Hansard utterances using BM25 lexical search.
+
+        Same interface as :meth:`fetch` but uses keyword matching instead of
+        semantic similarity. Not exposed as an agent tool — intended for
+        hybrid fusion.
+
+        Args:
+            query: The search query text.
+            party: Filter by political party.
+            person_id: Filter by speaker's person ID.
+            date_from: Filter by minimum date (inclusive).
+            date_to: Filter by maximum date (inclusive).
+
+        Returns:
+            List of structured dicts containing matching Hansard utterances,
+            or an empty list if no results were found.
+        """
+        results = self._bm25_search(
+            query,
+            party=party,
+            person_id=person_id,
+            date_from=date_from,
+            date_to=date_to,
         )
 
         return [self._format_search_result(utt) for utt in results]
