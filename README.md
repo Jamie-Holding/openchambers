@@ -8,9 +8,9 @@ OpenChambers combines semantic search with a conversational LLM interface to mak
 
 **What's inside:**
 
-- **Semantic retrieval pipeline**: Transforms raw parliamentary XML into chunked, embedded documents with context-aware preprocessing (question/answer detection, speaker attribution and hierarchical topic tracking)
+- **Hybrid retrieval pipeline**: Transforms raw parliamentary XML into chunked, embedded documents with context-aware preprocessing (question/answer detection, speaker attribution and hierarchical topic tracking). Retrieval combines vector similarity (pgvector HNSW) with BM25 lexical search (pg_textsearch), fused via Reciprocal Rank Fusion
 - **Agentic RAG architecture**: LangGraph-based agent that decides when to search, which filters to apply and how to synthesize evidence from multiple sources
-- **Production patterns**: Streaming responses, conversation persistence, resumable batch processing and efficient vector indexing with pgvector HNSW
+- **Production patterns**: Streaming responses, conversation persistence, resumable batch processing and efficient indexing with pgvector HNSW and BM25
 
 ## What you can ask
 
@@ -34,8 +34,8 @@ The agent provides a summary to answer the user's question based on retrieved ha
 
 | Feature | Description |
 |---------|-------------|
-| **Chatbot agent** | LangGraph react agent inteprets nuanced user questions, automatically applies filters, runs targeted searches and summarises results
-| **Semantic search** | Vector similarity search over parliamentary utterances using sentence-transformers embeddings and pgvector HNSW indexing |
+| **Chatbot agent** | LangGraph react agent interprets nuanced user questions, automatically applies filters, runs targeted searches and summarises results |
+| **Hybrid search** | Vector similarity (pgvector HNSW) and BM25 lexical search (pg_textsearch) fused with Reciprocal Rank Fusion for robust retrieval across semantic and keyword queries |
 | **Structured filtering** | Automatically applies filters by party, speaker, date range and resolves MP name ambiguity with user help |
 | **Voting record analysis** | Query MP voting patterns across policy areas |
 | **Context preservation** | Tracks debate hierarchy (oral heading → department → topic) and links answers to their triggering questions/statements |
@@ -63,10 +63,10 @@ The agent provides a summary to answer the user's question based on retrieved ha
 └──────────┼───────────────┼───────────────────┼──────────────┘
            │               │                   │
 ┌──────────▼───────────────▼───────────────────▼──────────────┐
-│                    PostgreSQL + pgvector                    │
+│              PostgreSQL + pgvector + pg_textsearch          │
 │  ┌────────────┐ ┌──────────┐ ┌────────┐ ┌────────────────┐  │
 │  │ utterances │ │embeddings│ │ people │ │ voting_records │  │
-│  │  + chunks  │ │  (HNSW)  │ │        │ │                │  │
+│  │  + chunks  │ │(HNSW+BM25│ │        │ │                │  │
 │  └────────────┘ └──────────┘ └────────┘ └────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -75,7 +75,7 @@ The agent provides a summary to answer the user's question based on retrieved ha
 1. XML debates → Parse & extract utterances with context
 2. Utterances → Summarize context (if long) → Format with metadata → Chunk with overlap
 3. Chunks → Generate embeddings (sentence-transformers) → Store in pgvector
-4. Query → Embed → HNSW similarity search → Filter → Return to agent → Synthesize response
+4. Query → Vector search (HNSW) + BM25 lexical search → Reciprocal Rank Fusion → Filter → Return to agent → Synthesize response
 
 ## Repository structure
 
@@ -237,7 +237,7 @@ Visit `http://localhost:3000` to start querying.
 | **API** | FastAPI, Server-Sent Events, Pydantic |
 | **Agent** | LangGraph, LangChain, OpenAI gpt-4o-mini |
 | **Embeddings** | sentence-transformers (multi-qa-MiniLM-L6-cos-v1) |
-| **Database** | PostgreSQL, pgvector (HNSW), SQLAlchemy |
+| **Database** | PostgreSQL, pgvector (HNSW), pg_textsearch (BM25), SQLAlchemy |
 | **Data processing** | Pandas, PyArrow, lxml |
 
 ## Data sources
@@ -251,7 +251,6 @@ This project uses open data from:
 All data is made available under open licenses by these organizations. This project is not affiliated with TheyWorkForYou or mySociety.
 
 ## Future improvements
-- Hybrid retrieval: add a lexical search component and fuse its scores with vector search results.
 - Formalise evaluation: build a small labelled query set and measure retrieval quality (Precision@k / Recall@k / nDCG).
 - Reduce retrieval-led hallucinations: tune similarity thresholds and add a reranking step (cross-encoder or LLM-judge) prior to generation.
 - Context management: cap and/or summarise chat history and retrieved context to stay within token limits.

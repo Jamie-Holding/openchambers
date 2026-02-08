@@ -167,6 +167,40 @@ class HansardRetrievalTool:
             date_to=date_to,
         )
 
+    def _reciprocal_rank_fusion(
+        self,
+        *ranked_lists: list[Utterance],
+        k: int = 60,
+        top_k: int | None = None,
+    ) -> list[Utterance]:
+        """Fuse multiple ranked lists using Reciprocal Rank Fusion.
+
+        Args:
+            *ranked_lists: One or more ranked lists of Utterance objects.
+            k: RRF constant (default 60).
+            top_k: Number of results to return. Defaults to self.top_k.
+
+        Returns:
+            Fused list of Utterance objects, ordered by combined RRF score.
+            Ties are broken by best individual rank, then utterance ID.
+        """
+        limit = top_k if top_k is not None else self.top_k
+        scores: dict[int, float] = {}
+        best_rank: dict[int, int] = {}
+        utterances: dict[int, Utterance] = {}
+
+        for ranked_list in ranked_lists:
+            for rank, utt in enumerate(ranked_list, start=1):
+                scores[utt.id] = scores.get(utt.id, 0.0) + 1.0 / (k + rank)
+                best_rank[utt.id] = min(best_rank.get(utt.id, rank), rank)
+                utterances[utt.id] = utt
+
+        top_ids = sorted(
+            scores,
+            key=lambda uid: (-scores[uid], best_rank[uid], uid),
+        )[:limit]
+        return [utterances[uid] for uid in top_ids]
+
     def fetch(
         self,
         query: str,
@@ -195,17 +229,22 @@ class HansardRetrievalTool:
             or an empty list if no results were found.
         """
         embedding = self.model.encode([query], convert_to_numpy=True)[0]
+        filters = dict(party=party, person_id=person_id,
+                       date_from=date_from, date_to=date_to)
 
-        results = self._vector_search(
-            embedding,
-            party=party,
-            person_id=person_id,
-            date_from=date_from,
-            date_to=date_to,
-            min_similarity=min_similarity,
-        )
+        # Over-fetch so fusion has enough candidates to rerank
+        saved_top_k = self.top_k
+        self.top_k = max(self.top_k * 3, 50)
+        try:
+            vector_results = self._vector_search(
+                embedding, **filters, min_similarity=min_similarity)
+            bm25_results = self._bm25_search(query, **filters)
+        finally:
+            self.top_k = saved_top_k
 
-        return [self._format_search_result(utt) for utt in results]
+        fused = self._reciprocal_rank_fusion(
+            vector_results, bm25_results, top_k=self.top_k)
+        return [self._format_search_result(utt) for utt in fused]
 
     def fetch_bm25(
         self,
