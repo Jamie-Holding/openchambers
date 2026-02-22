@@ -5,12 +5,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
-from backend.src.chatbot.nodes.classify import (
-    MAX_MESSAGES,
-    Classification,
-    classify_node,
-)
-from backend.src.chatbot.state import ActiveContext, ContextUpdate
+from backend.src.chatbot.nodes.classify import MAX_MESSAGES, classify_node
+from backend.src.chatbot.schemas import ActiveContext, Classification, ContextUpdate
 
 MOCK_PARTIES = ["conservative", "labour", "liberal-democrat", "scottish-national-party"]
 

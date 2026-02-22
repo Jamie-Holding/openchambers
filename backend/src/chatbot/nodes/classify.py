@@ -1,23 +1,13 @@
 """Classify user intent and extract structured context updates."""
 
-from typing import Literal
-
 from langchain_core.messages import SystemMessage
-from pydantic import BaseModel
 
 from backend.src.chatbot.prompts.classify import CLASSIFY_PROMPT
-from backend.src.chatbot.state import AgentState, ContextUpdate
+from backend.src.chatbot.schemas import Classification
+from backend.src.chatbot.state import AgentState
 from backend.src.chatbot.utils import hansard_tool, llm
 
 MAX_MESSAGES = 8
-
-
-class Classification(BaseModel):
-    """Structured output from the classifier LLM."""
-
-    user_intent: Literal["new_query", "refine_query", "answer_to_question"]
-    context_update: ContextUpdate
-    need_votes: bool
 
 
 async def classify_node(state: AgentState) -> dict:
