@@ -32,3 +32,10 @@ class Classification(BaseModel):
     user_intent: Literal["new_query", "refine_query", "answer_to_question"]
     context_update: ContextUpdate
     need_votes: bool
+
+
+class DateRange(BaseModel):
+    """Structured output for LLM date parsing fallback."""
+
+    date_from: str
+    date_to: str
