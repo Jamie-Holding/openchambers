@@ -26,7 +26,7 @@ def _build_filter_combos(active_context: ActiveContext) -> list[dict]:
 
 async def retrieve_node(state: AgentState) -> dict:
     """Fetch quotes and votes in parallel based on resolved context."""
-    active_context = state["active_context"]
+    active_context = state.get("active_context", ActiveContext())
     if not isinstance(active_context, ActiveContext):
         active_context = ActiveContext(**active_context)
 

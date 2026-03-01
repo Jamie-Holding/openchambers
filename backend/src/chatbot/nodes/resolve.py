@@ -129,7 +129,7 @@ async def resolve_node(state: AgentState) -> dict:
     intent = state.get("user_intent", "new_query")
     context_update_raw = state.get("context_update") or {}
     context_update = ContextUpdate(**context_update_raw)
-    active_context = state["active_context"]
+    active_context = state.get("active_context", ActiveContext())
 
     if not isinstance(active_context, ActiveContext):
         active_context = ActiveContext(**active_context)
