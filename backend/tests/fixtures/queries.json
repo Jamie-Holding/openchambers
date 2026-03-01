@@ -1,0 +1,83 @@
+[
+  {
+    "id": "simple_topic",
+    "description": "Basic topic search",
+    "turns": [
+      {"message": "What has been said about NHS waiting times?"}
+    ]
+  },
+  {
+    "id": "party_filter",
+    "description": "Search filtered by party",
+    "turns": [
+      {"message": "What has Labour said about housing?"}
+    ]
+  },
+  {
+    "id": "named_mp_unique",
+    "description": "Named MP with likely unique match",
+    "turns": [
+      {"message": "What has Tim Farron said about environmental issues?"}
+    ]
+  },
+  {
+    "id": "named_mp_ambiguous",
+    "description": "Ambiguous name triggers disambiguation",
+    "turns": [
+      {"message": "What has David been talking about recently?"},
+      {"message": "2"}
+    ]
+  },
+  {
+    "id": "voting_record",
+    "description": "Voting record request",
+    "turns": [
+      {"message": "How has Keir Starmer voted on immigration?"}
+    ]
+  },
+  {
+    "id": "compare_parties",
+    "description": "Cross-party comparison",
+    "turns": [
+      {"message": "Please compare Labour and Conservative views on immigration"}
+    ]
+  },
+  {
+    "id": "date_filter_year",
+    "description": "Explicit year filter",
+    "turns": [
+      {"message": "What has been said about immigration in 2026?"}
+    ]
+  },
+  {
+    "id": "date_filter_relative",
+    "description": "Relative date requiring knowledge of today",
+    "turns": [
+      {"message": "What has been said about climate change in the last 6 months?"}
+    ]
+  },
+  {
+    "id": "multi_turn_date_followup",
+    "description": "Date follow-up using conversation context",
+    "turns": [
+      {"message": "What has been said about immigration in 2026?"},
+      {"message": "How about 2025?"}
+    ]
+  },
+  {
+    "id": "multi_turn_mp_disambiguation",
+    "description": "Name disambiguation then follow-up",
+    "turns": [
+      {"message": "What has David said about Brexit?"},
+      {"message": "David Davis"},
+      {"message": "What is his voting record on this?"}
+    ]
+  },
+  {
+    "id": "no_results",
+    "description": "Query unlikely to have results",
+    "turns": [
+      {"message": "What has been said about quantum computing regulations?"}
+    ]
+  }
+]
