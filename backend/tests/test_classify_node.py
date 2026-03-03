@@ -24,7 +24,7 @@ def mock_llm(monkeypatch):
     mock_classifier = AsyncMock()
     mock_llm_instance = MagicMock()
     mock_llm_instance.with_structured_output.return_value = mock_classifier
-    monkeypatch.setattr("backend.src.chatbot.nodes.classify.llm", mock_llm_instance)
+    monkeypatch.setattr("backend.src.chatbot.nodes.classify.fast_llm", mock_llm_instance)
     return mock_classifier
 
 

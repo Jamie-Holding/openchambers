@@ -5,7 +5,7 @@ from langchain_core.messages import SystemMessage
 from backend.src.chatbot.prompts.classify import CLASSIFY_PROMPT
 from backend.src.chatbot.schemas import ActiveContext, Classification
 from backend.src.chatbot.state import AgentState
-from backend.src.chatbot.utils import hansard_tool, llm
+from backend.src.chatbot.utils import fast_llm, hansard_tool
 
 MAX_MESSAGES = 8
 
@@ -26,9 +26,8 @@ async def classify_node(state: AgentState) -> dict:
     ))
 
     recent_messages = state["messages"][-MAX_MESSAGES:]
-    classifier = llm.with_structured_output(Classification)
+    classifier = fast_llm.with_structured_output(Classification)
     result = await classifier.ainvoke([system, *recent_messages])
-
     return {
         "user_intent": result.user_intent,
         "context_update": result.context_update.model_dump(),

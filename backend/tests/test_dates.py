@@ -40,7 +40,7 @@ def mock_llm(monkeypatch):
     mock_parser = AsyncMock()
     mock_llm_instance = MagicMock()
     mock_llm_instance.with_structured_output.return_value = mock_parser
-    monkeypatch.setattr("backend.src.chatbot.dates.llm", mock_llm_instance)
+    monkeypatch.setattr("backend.src.chatbot.dates.fast_llm", mock_llm_instance)
     return mock_parser
 
 

@@ -7,7 +7,7 @@ from datetime import date, timedelta
 from backend.src.chatbot.messages.resolve import DATE_NOT_UNDERSTOOD
 from backend.src.chatbot.prompts.resolve import DATE_PARSE_PROMPT
 from backend.src.chatbot.schemas import DateRange
-from backend.src.chatbot.utils import llm
+from backend.src.chatbot.utils import fast_llm
 
 MONTHS = {m.lower(): i for i, m in enumerate(calendar.month_name) if m}
 
@@ -64,7 +64,7 @@ async def parse_dates_llm(date_text: str) -> tuple[str, str] | None:
     today = date.today().strftime("%Y-%m-%d")
     prompt = DATE_PARSE_PROMPT.format(today=today, date_text=date_text)
     try:
-        parser = llm.with_structured_output(DateRange)
+        parser = fast_llm.with_structured_output(DateRange)
         result = await parser.ainvoke(prompt)
         return result.date_from, result.date_to
     except Exception:
