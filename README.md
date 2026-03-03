@@ -9,7 +9,7 @@ OpenChambers combines semantic search with a conversational LLM interface to mak
 **What's inside:**
 
 - **Hybrid retrieval pipeline**: Transforms raw parliamentary XML into chunked, embedded documents with context-aware preprocessing (question/answer detection, speaker attribution and hierarchical topic tracking). Retrieval combines vector similarity (pgvector HNSW) with BM25 lexical search (pg_textsearch), fused via Reciprocal Rank Fusion
-- **Agentic RAG architecture**: LangGraph-based agent that decides when to search, which filters to apply and how to synthesize evidence from multiple sources
+- **Deterministic RAG pipeline**: LangGraph-based pipeline (Classify → Resolve → Retrieve → Generate) that interprets queries, resolves entities, searches and synthesizes evidence
 - **Production patterns**: Streaming responses, conversation persistence, resumable batch processing and efficient indexing with pgvector HNSW and BM25
 
 ## What you can ask
@@ -34,7 +34,7 @@ The agent provides a summary to answer the user's question based on retrieved ha
 
 | Feature | Description |
 |---------|-------------|
-| **Chatbot agent** | LangGraph react agent interprets nuanced user questions, automatically applies filters, runs targeted searches and summarises results |
+| **Chatbot agent** | LangGraph pipeline classifies intent, resolves entities, runs targeted searches and synthesises results |
 | **Hybrid search** | Vector similarity (pgvector HNSW) and BM25 lexical search (pg_textsearch) fused with Reciprocal Rank Fusion for robust retrieval across semantic and keyword queries |
 | **Structured filtering** | Automatically applies filters by party, speaker, date range and resolves MP name ambiguity with user help |
 | **Voting record analysis** | Query MP voting patterns across policy areas |
@@ -54,15 +54,15 @@ The agent provides a summary to answer the user's question based on retrieved ha
 ┌─────────────────────────▼───────────────────────────────────┐
 │                   FastAPI Backend                           │
 │  ┌────────────────────────────────────────────────────────┐ │
-│  │              LangGraph Agent                           │ │
-│  │  ┌──────────┐  ┌──────────────┐  ┌──────────────────┐  │ │
-│  │  │  fetch   │  │ list_people  │  │ get_voting_record│  │ │
-│  │  │ (search) │  │   (lookup)   │  │     (search)     │  │ │
-│  │  └────┬─────┘  └──────┬───────┘  └────────┬─────────┘  │ │
-│  └───────┼───────────────┼───────────────────┼────────────┘ │
-└──────────┼───────────────┼───────────────────┼──────────────┘
-           │               │                   │
-┌──────────▼───────────────▼───────────────────▼──────────────┐
+│  │            LangGraph Pipeline                          │ │
+│  │  ┌──────────┐  ┌─────────┐  ┌──────────┐  ┌──────────┐ │ │
+│  │  │ Classify │→ │ Resolve │→ │ Retrieve │→ │ Generate │ │ │
+│  │  │  (LLM)   │  │(lookup) │  │ (search) │  │  (LLM)   │ │ │
+│  │  └──────────┘  └───┬─────┘  └─────┬────┘  └──────────┘ │ │
+│  └────────────────────┼──────────────┼────────────────────┘ │
+└──────────────────────────────────────┼──────────────────────┘
+                        │              │
+┌───────────────────────▼──────────────▼──────────────────────┐
 │              PostgreSQL + pgvector + pg_textsearch          │
 │  ┌────────────┐ ┌──────────┐ ┌────────┐ ┌────────────────┐  │
 │  │ utterances │ │embeddings│ │ people │ │ voting_records │  │
@@ -154,7 +154,8 @@ Edit `.env` with your database credentials and OpenAI key:
 DATABASE_URL=postgresql+psycopg://hansard_user:your_password@localhost:5432/hansard
 OPENAI_API_KEY=sk-...
 EMBEDDING_MODEL_NAME=sentence-transformers/multi-qa-MiniLM-L6-cos-v1
-AGENT_MODEL_NAME=gpt-4o-mini
+LLM_MODEL_NAME=gpt-4o-mini
+FAST_LLM_MODEL_NAME=gpt-4.1-nano
 ```
 
 ### 3. Install dependencies
@@ -235,7 +236,7 @@ Visit `http://localhost:3000` to start querying.
 |-------|-------------|
 | **Frontend** | Next.js 16, React 19, TypeScript, Tailwind CSS |
 | **API** | FastAPI, Server-Sent Events, Pydantic |
-| **Agent** | LangGraph, LangChain, OpenAI gpt-4o-mini |
+| **Agent** | LangGraph, LangChain, OpenAI gpt-4o-mini + gpt-4.1-nano |
 | **Embeddings** | sentence-transformers (multi-qa-MiniLM-L6-cos-v1) |
 | **Database** | PostgreSQL, pgvector (HNSW), pg_textsearch (BM25), SQLAlchemy |
 | **Data processing** | Pandas, PyArrow, lxml |
