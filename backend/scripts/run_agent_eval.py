@@ -18,7 +18,7 @@ from pathlib import Path
 
 from langgraph.checkpoint.memory import MemorySaver
 
-from backend.src.chatbot.agent import create_hansard_agent
+from backend.src.chatbot.agent import ask_agent, create_hansard_agent
 
 FIXTURES_DIR = Path(__file__).resolve().parent.parent / "tests" / "fixtures"
 QUERIES_PATH = FIXTURES_DIR / "queries.json"
@@ -26,19 +26,9 @@ QUERIES_PATH = FIXTURES_DIR / "queries.json"
 
 async def collect_response(graph, thread_id: str, message: str) -> str:
     """Run a single message through the agent and return the full response."""
-    config = {"configurable": {"thread_id": thread_id}}
     tokens = []
-
-    async for event in graph.astream_events(
-        {"messages": [("user", message)]},
-        config,
-        version="v2",
-    ):
-        if event["event"] == "on_chat_model_stream":
-            content = event["data"]["chunk"].content
-            if content:
-                tokens.append(content)
-
+    async for token in ask_agent(graph, thread_id, message):
+        tokens.append(token)
     return "".join(tokens)
 
 
