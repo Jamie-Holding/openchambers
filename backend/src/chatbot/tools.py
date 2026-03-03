@@ -2,7 +2,7 @@
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
-from sqlalchemy import and_, desc, func, literal, select
+from sqlalchemy import Float, and_, desc, func, literal, select, type_coerce
 from sqlalchemy.orm import Session
 
 from backend.src.data.db import init_db
@@ -31,78 +31,38 @@ class HansardRetrievalTool:
         self.engine = init_db()
         self.parties = self._fetch_parties()
 
-    def _chunk_search(
-        self,
-        score_expr,
-        party: str | None = None,
-        person_id: int | None = None,
-        date_from: str | None = None,
-        date_to: str | None = None,
-        extra_join: tuple | None = None,
-        min_score: float | None = None,
-    ) -> list[Utterance]:
-        """Score chunks, deduplicate by utterance, filter, and return results.
+    @staticmethod
+    def _build_filters(party=None, person_id=None, date_from=None, date_to=None):
+        """Build SQLAlchemy filter conditions on the Utterance table."""
+        conditions = []
+        if party:
+            conditions.append(func.lower(Utterance.party_at_time) == party.lower())
+        if person_id:
+            conditions.append(Utterance.person_id == person_id)
+        if date_from:
+            conditions.append(Utterance.date >= date_from)
+        if date_to:
+            conditions.append(Utterance.date <= date_to)
+        return conditions
 
-        Builds a subquery that finds the best (minimum) score per utterance,
-        then joins to the Utterance table with optional filters. Both vector
-        and BM25 search use this method — they differ only in score_expr
-        and extra_join.
+    def _dedup_and_fetch(self, session, rows) -> list[Utterance]:
+        """Deduplicate (utterance_id, score) rows and fetch Utterance objects."""
+        best: dict[int, float] = {}
+        for utterance_id, score in rows:
+            if utterance_id not in best or score < best[utterance_id]:
+                best[utterance_id] = score
 
-        Args:
-            score_expr: SQLAlchemy expression scoring each chunk. Must return
-                negative scores where lower = better match (convention shared
-                by pgvector ``<#>`` and pg_textsearch ``<@>``).
-            party: Filter by political party (case-insensitive).
-            person_id: Filter by speaker's person ID.
-            date_from: Filter by minimum date (inclusive).
-            date_to: Filter by maximum date (inclusive).
-            extra_join: Optional ``(target, onclause)`` tuple for an
-                additional JOIN in the scoring subquery (e.g. to the
-                Embedding table for vector search).
-            min_score: Optional maximum score threshold. Results with
-                best_score > min_score are excluded.
+        top_ids = sorted(best, key=lambda uid: best[uid])[:self.top_k]
+        if not top_ids:
+            return []
 
-        Returns:
-            List of Utterance objects ordered by relevance.
-        """
-        with Session(self.engine) as session:
-            conditions = []
-
-            if party:
-                conditions.append(func.lower(Utterance.party_at_time) == party.lower())
-
-            if person_id:
-                conditions.append(Utterance.person_id == person_id)
-
-            if date_from:
-                conditions.append(Utterance.date >= date_from)
-
-            if date_to:
-                conditions.append(Utterance.date <= date_to)
-
-            # Subquery: find best (minimum) score per utterance
-            sub_stmt = select(
-                UtteranceChunk.utterance_id,
-                func.min(score_expr).label("best_score"),
-            )
-            if extra_join is not None:
-                sub_stmt = sub_stmt.join(*extra_join)
-            best_chunks = sub_stmt.group_by(UtteranceChunk.utterance_id).subquery()
-
-            # Main query: join utterances to their best scores
-            stmt = select(Utterance).join(
-                best_chunks, best_chunks.c.utterance_id == Utterance.id
-            )
-
-            if conditions:
-                stmt = stmt.where(and_(*conditions))
-
-            if min_score is not None:
-                stmt = stmt.where(best_chunks.c.best_score <= min_score)
-
-            stmt = stmt.order_by(best_chunks.c.best_score).limit(self.top_k)
-
-            return list(session.execute(stmt).scalars().all())
+        utterances = {
+            u.id: u
+            for u in session.execute(
+                select(Utterance).where(Utterance.id.in_(top_ids))
+            ).scalars().all()
+        }
+        return [utterances[uid] for uid in top_ids if uid in utterances]
 
     def _vector_search(
         self,
@@ -128,15 +88,29 @@ class HansardRetrievalTool:
             List of Utterance objects ordered by semantic similarity.
         """
         effective_min_sim = min_similarity if min_similarity is not None else self.min_similarity
-        return self._chunk_search(
-            score_expr=Embedding.embedding.op("<#>")(query_embedding),
-            party=party,
-            person_id=person_id,
-            date_from=date_from,
-            date_to=date_to,
-            extra_join=(Embedding, Embedding.chunk_id == UtteranceChunk.id),
-            min_score=literal(-effective_min_sim) if effective_min_sim is not None else None,
+        score_expr = type_coerce(
+            Embedding.embedding.op("<#>")(query_embedding), Float
         )
+
+        with Session(self.engine) as session:
+            stmt = (
+                select(UtteranceChunk.utterance_id, score_expr.label("score"))
+                .join(Embedding, Embedding.chunk_id == UtteranceChunk.id)
+                .order_by("score")
+                .limit(self.top_k * 3)
+            )
+
+            if effective_min_sim is not None:
+                stmt = stmt.where(score_expr <= literal(-effective_min_sim))
+
+            conditions = self._build_filters(party, person_id, date_from, date_to)
+            if conditions:
+                stmt = stmt.join(
+                    Utterance, UtteranceChunk.utterance_id == Utterance.id
+                ).where(and_(*conditions))
+
+            rows = session.execute(stmt).all()
+            return self._dedup_and_fetch(session, rows)
 
     def _bm25_search(
         self,
@@ -158,14 +132,23 @@ class HansardRetrievalTool:
         Returns:
             List of Utterance objects ordered by BM25 relevance.
         """
-        bm25_query = func.to_bm25query(query, literal("utterance_chunk_bm25_idx"))
-        return self._chunk_search(
-            score_expr=UtteranceChunk.chunk_text.op("<@>")(bm25_query),
-            party=party,
-            person_id=person_id,
-            date_from=date_from,
-            date_to=date_to,
-        )
+        score_expr = UtteranceChunk.chunk_text.op("<@>")(query)
+
+        with Session(self.engine) as session:
+            stmt = (
+                select(UtteranceChunk.utterance_id, score_expr.label("score"))
+                .order_by("score")
+                .limit(self.top_k * 3)
+            )
+
+            conditions = self._build_filters(party, person_id, date_from, date_to)
+            if conditions:
+                stmt = stmt.join(
+                    Utterance, UtteranceChunk.utterance_id == Utterance.id
+                ).where(and_(*conditions))
+
+            rows = session.execute(stmt).all()
+            return self._dedup_and_fetch(session, rows)
 
     def _reciprocal_rank_fusion(
         self,
