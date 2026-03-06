@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
-from backend.src.chatbot.nodes.classify import MAX_MESSAGES, classify_node
-from backend.src.chatbot.schemas import ActiveContext, Classification, ContextUpdate
+from src.chatbot.nodes.classify import MAX_MESSAGES, classify_node
+from src.chatbot.schemas import ActiveContext, Classification, ContextUpdate
 
 MOCK_PARTIES = ["conservative", "labour", "liberal-democrat", "scottish-national-party"]
 
@@ -24,7 +24,7 @@ def mock_llm(monkeypatch):
     mock_classifier = AsyncMock()
     mock_llm_instance = MagicMock()
     mock_llm_instance.with_structured_output.return_value = mock_classifier
-    monkeypatch.setattr("backend.src.chatbot.nodes.classify.fast_llm", mock_llm_instance)
+    monkeypatch.setattr("src.chatbot.nodes.classify.fast_llm", mock_llm_instance)
     return mock_classifier
 
 
@@ -34,7 +34,7 @@ def mock_hansard_tool(monkeypatch):
     mock_tool = MagicMock()
     mock_tool.list_parties.return_value = MOCK_PARTIES
     monkeypatch.setattr(
-        "backend.src.chatbot.nodes.classify.hansard_tool", mock_tool
+        "src.chatbot.nodes.classify.hansard_tool", mock_tool
     )
     return mock_tool
 

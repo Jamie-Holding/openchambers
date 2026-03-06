@@ -4,8 +4,8 @@ import logging
 
 from sqlalchemy import Engine, create_engine, text
 
-from backend.config.settings import DATABASE_URL
-from backend.src.data.database.models import (
+from config.settings import DATABASE_URL
+from src.data.database.models import (
     Base,
     Division,
     Membership,
@@ -29,6 +29,9 @@ def init_db() -> Engine:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_textsearch"))
         conn.commit()
+
+    # Ensure all tables exist (idempotent — only creates missing tables)
+    Base.metadata.create_all(engine)
 
     return engine
 

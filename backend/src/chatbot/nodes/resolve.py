@@ -2,15 +2,15 @@
 
 from langchain_core.messages import AIMessage
 
-from backend.src.chatbot.dates import parse_dates
-from backend.src.chatbot.messages.resolve import (
+from src.chatbot.dates import parse_dates
+from src.chatbot.messages.resolve import (
     PERSON_DISAMBIGUATION,
     PERSON_NOT_FOUND,
     format_person_options,
 )
-from backend.src.chatbot.schemas import ActiveContext, ContextUpdate
-from backend.src.chatbot.state import AgentState
-from backend.src.chatbot.utils import hansard_tool
+from src.chatbot.schemas import ActiveContext, ContextUpdate
+from src.chatbot.state import AgentState
+from src.chatbot.utils import hansard_tool
 
 
 def _merge_context(active_context: ActiveContext, context_update: ContextUpdate,

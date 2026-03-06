@@ -6,13 +6,13 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
-from backend.src.chatbot.messages.generate import NO_RESULTS
-from backend.src.chatbot.nodes.generate import (
+from src.chatbot.messages.generate import NO_RESULTS
+from src.chatbot.nodes.generate import (
     _prepare_messages,
     _truncate_ai_message,
     generate_node,
 )
-from backend.src.chatbot.schemas import ActiveContext
+from src.chatbot.schemas import ActiveContext
 
 MOCK_QUOTE = {
     "date": "2025-03-01",
@@ -68,7 +68,7 @@ def mock_llm(monkeypatch):
     """Replace the llm in generate module with a mock."""
     mock_llm_instance = AsyncMock()
     mock_llm_instance.ainvoke.return_value = AIMessage(content="SUMMARY:\n- Mocked response.")
-    monkeypatch.setattr("backend.src.chatbot.nodes.generate.llm", mock_llm_instance)
+    monkeypatch.setattr("src.chatbot.nodes.generate.llm", mock_llm_instance)
     return mock_llm_instance
 
 

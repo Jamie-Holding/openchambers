@@ -5,7 +5,7 @@ from typing import Annotated
 from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
 
-from backend.src.chatbot.schemas import ActiveContext, ContextUpdate
+from src.chatbot.schemas import ActiveContext, ContextUpdate
 
 
 class AgentState(TypedDict):

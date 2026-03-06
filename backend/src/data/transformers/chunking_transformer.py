@@ -6,7 +6,7 @@ import re
 import pandas as pd
 from transformers import AutoTokenizer
 
-from backend.src.data.transformers.base import BaseTransformer
+from src.data.transformers.base import BaseTransformer
 
 logger = logging.getLogger(__name__)
 

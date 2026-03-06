@@ -4,10 +4,10 @@ import calendar
 import re
 from datetime import date, timedelta
 
-from backend.src.chatbot.messages.resolve import DATE_NOT_UNDERSTOOD
-from backend.src.chatbot.prompts.resolve import DATE_PARSE_PROMPT
-from backend.src.chatbot.schemas import DateRange
-from backend.src.chatbot.utils import fast_llm
+from src.chatbot.messages.resolve import DATE_NOT_UNDERSTOOD
+from src.chatbot.prompts.resolve import DATE_PARSE_PROMPT
+from src.chatbot.schemas import DateRange
+from src.chatbot.utils import fast_llm
 
 MONTHS = {m.lower(): i for i, m in enumerate(calendar.month_name) if m}
 

@@ -103,77 +103,29 @@ openchambers/
 
 ### Prerequisites
 
-- Python 3.10+
-- PostgreSQL 17+ with [pgvector](https://github.com/pgvector/pgvector) and [pg_textsearch](https://github.com/timescale/pg_textsearch) extensions
-- Node.js 18+ (for frontend)
+- [Docker](https://docs.docker.com/get-docker/) and Docker Compose
 - OpenAI API key
 
-### 1. Set up the database
-
-**Install pgvector extension** (if not already installed):
-
-```bash
-# Ubuntu/Debian (adjust version number to match your PostgreSQL)
-sudo apt install postgresql-18-pgvector
-
-# macOS with Homebrew
-brew install pgvector
-```
-
-For other platforms, see the [pgvector installation guide](https://github.com/pgvector/pgvector#installation).
-
-**Install pg_textsearch extension** (for BM25 lexical search):
-
-```bash
-# Download the pre-built .deb (adjust PG version and architecture as needed)
-wget https://github.com/timescale/pg_textsearch/releases/download/v0.5.0/pg-textsearch-postgresql-18_0.5.0-1_amd64.deb
-sudo dpkg -i pg-textsearch-postgresql-18_0.5.0-1_amd64.deb
-```
-
-For other platforms, see the [pg_textsearch releases](https://github.com/timescale/pg_textsearch/releases).
-
-**Create the database and user:**
-
-```bash
-sudo -u postgres psql -c "CREATE USER hansard_user WITH PASSWORD 'your_password';"
-sudo -u postgres psql -c "CREATE DATABASE hansard OWNER hansard_user;"
-sudo -u postgres psql -d hansard -c "CREATE EXTENSION vector;"
-sudo -u postgres psql -d hansard -c "CREATE EXTENSION pg_textsearch;"
-```
-
-The application will automatically create tables and indexes on first run.
-
-### 2. Configure environment
+### 1. Configure environment
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` with your database credentials and OpenAI key:
+Edit `.env` with your OpenAI key:
 ```
-DATABASE_URL=postgresql+psycopg://hansard_user:your_password@localhost:5432/hansard
 OPENAI_API_KEY=sk-...
-EMBEDDING_MODEL_NAME=sentence-transformers/multi-qa-MiniLM-L6-cos-v1
-LLM_MODEL_NAME=gpt-4o-mini
-FAST_LLM_MODEL_NAME=gpt-4.1-nano
 ```
 
-### 3. Install dependencies
+### 2. Start the application
 
 ```bash
-# Backend
-cd backend
-python3 -m venv venv
-pip install -r requirements.txt
-cd ..
-
-# Frontend
-cd frontend
-npm install
-cd ..
+docker compose up
 ```
 
-### 4. Download data
+This starts PostgreSQL (with pgvector and pg_textsearch), the FastAPI backend and the Next.js frontend. Visit `http://localhost:3000` once all services are ready.
+
+### 3. Download data
 
 **Hansard debates** (example for January 2026):
 ```bash
@@ -200,35 +152,33 @@ curl -L -o backend/data/hansard/metadata/policies.json \
   https://votes.theyworkforyou.com/policies.json
 ```
 
-### 5. Ingest data
+### 4. Ingest data
 
-Edit the start date in *backend/scripts/add_debates_to_db.py* and run from the project root:
+Edit the start date in *backend/scripts/add_debates_to_db.py*, then run against the running backend container:
 
 ```bash
-source backend/venv/bin/activate
-
-# Process debates and generate embeddings (creates tables on first run)
-python3 -m backend.scripts.add_debates_to_db
+# Process debates and generate embeddings
+docker compose exec backend python3 -m scripts.add_debates_to_db
 
 # Load metadata (people, votes, policies)
-python3 -m backend.scripts.add_metadata_to_db
+docker compose exec backend python3 -m scripts.add_metadata_to_db
 ```
 
 Checkpointing is in place which avoids duplicate records when re-running the scripts.
 
-### 6. Run the application
+### Development
+
+Source files are bind-mounted into the containers — editing any Python file triggers an automatic uvicorn reload, and frontend changes are picked up by Next.js hot reload. No need to restart containers.
 
 ```bash
-# Terminal 1: Backend (from project root)
-source backend/venv/bin/activate
-uvicorn backend.src.api.app:app --reload
+# Run tests
+docker compose exec backend python3 -m pytest -v
 
-# Terminal 2: Frontend
-cd frontend
-npm run dev
+# Access the database
+docker compose exec db psql -U hansard_user -d hansard
 ```
 
-Visit `http://localhost:3000` to start querying.
+Database data persists across restarts in a Docker volume. To reset everything: `docker compose down -v`.
 
 ## Tech stack
 

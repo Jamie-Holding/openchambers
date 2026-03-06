@@ -6,8 +6,8 @@ import pandas as pd
 from sqlalchemy import text
 from tqdm import tqdm
 
-from backend.src.data.database.base import BaseRepository
-from backend.src.data.database.models import Division, Membership, MPPolicySummary, Person, Vote
+from src.data.database.base import BaseRepository
+from src.data.database.models import Division, Membership, MPPolicySummary, Person, Vote
 
 
 class MetadataRepository(BaseRepository):

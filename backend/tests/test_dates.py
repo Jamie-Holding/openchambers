@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from backend.src.chatbot.dates import parse_dates, parse_dates_regex
-from backend.src.chatbot.messages.resolve import DATE_NOT_UNDERSTOOD
-from backend.src.chatbot.schemas import DateRange
+from src.chatbot.dates import parse_dates, parse_dates_regex
+from src.chatbot.messages.resolve import DATE_NOT_UNDERSTOOD
+from src.chatbot.schemas import DateRange
 
 MOCK_TODAY = date(2025, 3, 15)
 MOCK_TODAY_STR = "2025-03-15"
@@ -28,7 +28,7 @@ class FakeDate(date):
 @pytest.fixture
 def freeze_date(monkeypatch):
     """Freeze date.today() in the dates module to MOCK_TODAY."""
-    monkeypatch.setattr("backend.src.chatbot.dates.date", FakeDate)
+    monkeypatch.setattr("src.chatbot.dates.date", FakeDate)
 
 
 @pytest.fixture
@@ -40,7 +40,7 @@ def mock_llm(monkeypatch):
     mock_parser = AsyncMock()
     mock_llm_instance = MagicMock()
     mock_llm_instance.with_structured_output.return_value = mock_parser
-    monkeypatch.setattr("backend.src.chatbot.dates.fast_llm", mock_llm_instance)
+    monkeypatch.setattr("src.chatbot.dates.fast_llm", mock_llm_instance)
     return mock_parser
 
 

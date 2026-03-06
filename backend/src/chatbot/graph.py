@@ -3,11 +3,11 @@
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from backend.src.chatbot.nodes.classify import classify_node
-from backend.src.chatbot.nodes.generate import generate_node
-from backend.src.chatbot.nodes.resolve import resolve_node
-from backend.src.chatbot.nodes.retrieve import retrieve_node
-from backend.src.chatbot.state import AgentState
+from src.chatbot.nodes.classify import classify_node
+from src.chatbot.nodes.generate import generate_node
+from src.chatbot.nodes.resolve import resolve_node
+from src.chatbot.nodes.retrieve import retrieve_node
+from src.chatbot.state import AgentState
 
 
 def route_after_resolve(state: AgentState) -> str:

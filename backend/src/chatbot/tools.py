@@ -5,8 +5,8 @@ from sentence_transformers import SentenceTransformer
 from sqlalchemy import Float, and_, desc, func, literal, select, type_coerce
 from sqlalchemy.orm import Session
 
-from backend.src.data.db import init_db
-from backend.src.data.database.models import (
+from src.data.db import init_db
+from src.data.database.models import (
     Embedding,
     Membership,
     Person,

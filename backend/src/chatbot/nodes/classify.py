@@ -2,10 +2,10 @@
 
 from langchain_core.messages import SystemMessage
 
-from backend.src.chatbot.prompts.classify import CLASSIFY_PROMPT
-from backend.src.chatbot.schemas import ActiveContext, Classification
-from backend.src.chatbot.state import AgentState
-from backend.src.chatbot.utils import fast_llm, hansard_tool
+from src.chatbot.prompts.classify import CLASSIFY_PROMPT
+from src.chatbot.schemas import ActiveContext, Classification
+from src.chatbot.state import AgentState
+from src.chatbot.utils import fast_llm, hansard_tool
 
 MAX_MESSAGES = 8
 

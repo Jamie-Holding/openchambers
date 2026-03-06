@@ -4,8 +4,8 @@ Loads test cases from backend/tests/fixtures/queries.json, runs each
 through the agent, and saves input/output pairs to a timestamped
 results file for before/after comparison.
 
-Usage (from project root):
-    python3 -m backend.scripts.run_agent_eval
+Usage (from backend/ directory):
+    python3 -m scripts.run_agent_eval
 """
 
 import asyncio
@@ -18,7 +18,7 @@ from pathlib import Path
 
 from langgraph.checkpoint.memory import MemorySaver
 
-from backend.src.chatbot.agent import ask_agent, create_hansard_agent
+from src.chatbot.agent import ask_agent, create_hansard_agent
 
 FIXTURES_DIR = Path(__file__).resolve().parent.parent / "tests" / "fixtures"
 QUERIES_PATH = FIXTURES_DIR / "queries.json"

@@ -2,8 +2,8 @@
 
 import logging
 
-from backend.src.data.database.metadata import MetadataRepository
-from backend.src.data.loaders.theyworkforyou.metadata import Metadata
+from src.data.database.metadata import MetadataRepository
+from src.data.loaders.theyworkforyou.metadata import Metadata
 
 logger = logging.getLogger(__name__)
 

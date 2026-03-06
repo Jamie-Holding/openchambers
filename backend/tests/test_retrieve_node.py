@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 import pytest
 from langchain_core.messages import HumanMessage
 
-from backend.src.chatbot.nodes.retrieve import _build_filter_combos, retrieve_node
-from backend.src.chatbot.schemas import ActiveContext
+from src.chatbot.nodes.retrieve import _build_filter_combos, retrieve_node
+from src.chatbot.schemas import ActiveContext
 
 MOCK_QUOTE = {"speech_id": 1, "text": "We need more housing.", "date": "2025-03-01"}
 MOCK_QUOTE_2 = {"speech_id": 2, "text": "Education is key.", "date": "2025-04-01"}
@@ -23,7 +23,7 @@ def mock_hansard_tool(monkeypatch):
     mock_tool = MagicMock()
     mock_tool.fetch.return_value = [MOCK_QUOTE]
     mock_tool.get_mp_voting_record.return_value = [MOCK_VOTE]
-    monkeypatch.setattr("backend.src.chatbot.nodes.retrieve.hansard_tool", mock_tool)
+    monkeypatch.setattr("src.chatbot.nodes.retrieve.hansard_tool", mock_tool)
     return mock_tool
 
 

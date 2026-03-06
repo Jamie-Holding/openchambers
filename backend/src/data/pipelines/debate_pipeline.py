@@ -5,11 +5,11 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from backend.src.data.loaders.theyworkforyou.debates import Debates
+from src.data.loaders.theyworkforyou.debates import Debates
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_CHECKPOINT_PATH = "backend/data/processed/.debate_pipeline_checkpoint.json"
+DEFAULT_CHECKPOINT_PATH = "data/processed/.debate_pipeline_checkpoint.json"
 
 
 class DebatePipeline:

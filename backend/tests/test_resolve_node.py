@@ -5,14 +5,14 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
-from backend.src.chatbot.messages.resolve import PERSON_DISAMBIGUATION, PERSON_NOT_FOUND
-from backend.src.chatbot.nodes.resolve import (
+from src.chatbot.messages.resolve import PERSON_DISAMBIGUATION, PERSON_NOT_FOUND
+from src.chatbot.nodes.resolve import (
     _merge_context,
     _resolve_people,
     _resolve_person_disambiguation,
     resolve_node,
 )
-from backend.src.chatbot.schemas import ActiveContext, ContextUpdate
+from src.chatbot.schemas import ActiveContext, ContextUpdate
 
 SINGLE_MATCH = [{"person_id": 101, "display_name": "Keir Starmer", "current_party": "labour"}]
 DIFFERENT_NAMES_MATCH = [
@@ -33,7 +33,7 @@ SAME_NAME_MATCH = [
 def mock_hansard_tool(monkeypatch):
     """Replace hansard_tool in the resolve module with a mock."""
     mock_tool = MagicMock()
-    monkeypatch.setattr("backend.src.chatbot.nodes.resolve.hansard_tool", mock_tool)
+    monkeypatch.setattr("src.chatbot.nodes.resolve.hansard_tool", mock_tool)
     return mock_tool
 
 
@@ -41,7 +41,7 @@ def mock_hansard_tool(monkeypatch):
 def mock_parse_dates(monkeypatch):
     """Replace parse_dates in the resolve module with a mock."""
     mock_fn = AsyncMock(return_value=(None, None, None))
-    monkeypatch.setattr("backend.src.chatbot.nodes.resolve.parse_dates", mock_fn)
+    monkeypatch.setattr("src.chatbot.nodes.resolve.parse_dates", mock_fn)
     return mock_fn
 
 

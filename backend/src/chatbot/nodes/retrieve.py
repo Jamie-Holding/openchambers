@@ -3,9 +3,9 @@
 import asyncio
 from itertools import product
 
-from backend.src.chatbot.schemas import ActiveContext
-from backend.src.chatbot.state import AgentState
-from backend.src.chatbot.utils import hansard_tool
+from src.chatbot.schemas import ActiveContext
+from src.chatbot.state import AgentState
+from src.chatbot.utils import hansard_tool
 
 
 def _build_filter_combos(active_context: ActiveContext) -> list[dict]:

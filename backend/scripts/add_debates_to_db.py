@@ -2,13 +2,13 @@ import logging
 
 from sentence_transformers import SentenceTransformer
 
-from backend.config.settings import EMBEDDING_MODEL_NAME
-from backend.src.data.db import init_db, reset_db
-from backend.src.data.database.utterance import UtteranceRepository
-from backend.src.data.pipelines.debate_pipeline import DebatePipeline
-from backend.src.data.transformers.chunking_transformer import ChunkingTransformer
-from backend.src.data.transformers.embedding_text_formatter import EmbeddingFormatter
-from backend.src.data.transformers.statement_summarizer import StatementSummarizer
+from config.settings import EMBEDDING_MODEL_NAME
+from src.data.db import init_db, reset_db
+from src.data.database.utterance import UtteranceRepository
+from src.data.pipelines.debate_pipeline import DebatePipeline
+from src.data.transformers.chunking_transformer import ChunkingTransformer
+from src.data.transformers.embedding_text_formatter import EmbeddingFormatter
+from src.data.transformers.statement_summarizer import StatementSummarizer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     statement_summarizer = StatementSummarizer(
         model="gpt-4o-mini",
         token_threshold=100,
-        cache_path="backend/data/processed/.statement_summaries_cache.json",
+        cache_path="data/processed/.statement_summaries_cache.json",
         **INCLUDE_CONTEXTS
     )
     embedding_formatter = EmbeddingFormatter(
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     # Initialize pipeline
     # -----------------------------------------------------
     pipeline = DebatePipeline(
-        data_dir="backend/data/hansard/debates",
+        data_dir="data/hansard/debates",
         repository=utterance_repo,
         transformers=transformers,
         embedding_model=embedding_model,

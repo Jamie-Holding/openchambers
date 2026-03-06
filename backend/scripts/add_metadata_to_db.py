@@ -1,8 +1,8 @@
 import logging
 
-from backend.src.data.db import init_db, reset_metadata_tables
-from backend.src.data.database.metadata import MetadataRepository
-from backend.src.data.pipelines.metadata_pipeline import MetadataPipeline
+from src.data.db import init_db, reset_metadata_tables
+from src.data.database.metadata import MetadataRepository
+from src.data.pipelines.metadata_pipeline import MetadataPipeline
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     # Initialize pipeline
     # -----------------------------------------------------
     pipeline = MetadataPipeline(
-        metadata_dir="backend/data/hansard/metadata",
+        metadata_dir="data/hansard/metadata",
         repository=metadata_repo
     )
 

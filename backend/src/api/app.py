@@ -12,8 +12,8 @@ from psycopg_pool import AsyncConnectionPool
 from psycopg.rows import dict_row
 
 # Local imports
-from backend.config.settings import DATABASE_URL
-from backend.src.chatbot.agent import ask_agent, create_hansard_agent
+from config.settings import DATABASE_URL
+from src.chatbot.agent import ask_agent, create_hansard_agent
 
 logger = logging.getLogger(__name__)
 

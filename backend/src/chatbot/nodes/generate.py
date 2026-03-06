@@ -4,10 +4,10 @@ import json
 
 from langchain_core.messages import AIMessage, SystemMessage
 
-from backend.src.chatbot.messages.generate import NO_RESULTS
-from backend.src.chatbot.prompts.generate import GENERATE_PROMPT
-from backend.src.chatbot.state import AgentState
-from backend.src.chatbot.utils import llm
+from src.chatbot.messages.generate import NO_RESULTS
+from src.chatbot.prompts.generate import GENERATE_PROMPT
+from src.chatbot.state import AgentState
+from src.chatbot.utils import llm
 
 MAX_MESSAGES = 8
 

@@ -5,7 +5,7 @@ from collections.abc import AsyncIterator
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph.state import CompiledStateGraph
 
-from backend.src.chatbot.graph import build_graph
+from src.chatbot.graph import build_graph
 
 
 def create_hansard_agent(checkpointer: BaseCheckpointSaver) -> CompiledStateGraph:

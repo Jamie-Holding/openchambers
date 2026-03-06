@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from backend.src.chatbot.tools import HansardRetrievalTool
+from src.chatbot.tools import HansardRetrievalTool
 
 
 def _utt(uid: int) -> SimpleNamespace:

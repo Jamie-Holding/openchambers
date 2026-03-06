@@ -1,0 +1,54 @@
+services:
+  db:
+    build:
+      context: ./docker/postgres
+    environment:
+      POSTGRES_USER: hansard_user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: hansard
+    ports:
+      - "5499:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hansard_user -d hansard"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    command: postgres -c shared_preload_libraries=pg_textsearch
+
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - hf_cache:/root/.cache/huggingface
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      uvicorn src.api.app:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+      --reload-dir src
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    command: npm run dev -- --hostname 0.0.0.0
+
+volumes:
+  pgdata:
+  hf_cache:

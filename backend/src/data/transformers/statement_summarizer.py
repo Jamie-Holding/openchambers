@@ -11,7 +11,7 @@ from openai import AsyncOpenAI
 from tqdm.asyncio import tqdm_asyncio
 from transformers import AutoTokenizer
 
-from backend.src.data.transformers.base import BaseTransformer
+from src.data.transformers.base import BaseTransformer
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ class StatementSummarizer(BaseTransformer):
         cache_path: Path to the persistent cache file.
     """
 
-    DEFAULT_CACHE_PATH = "backend/data/processed/.statement_summaries_cache.json"
+    DEFAULT_CACHE_PATH = "data/processed/.statement_summaries_cache.json"
     FIELDS_TO_SUMMARIZE = {
         "statement_text": "statement",
         "question_text": "question",

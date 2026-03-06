@@ -2,8 +2,8 @@
 
 from langchain_openai import ChatOpenAI
 
-from backend.config.settings import EMBEDDING_MODEL_NAME, FAST_LLM_MODEL_NAME, LLM_MODEL_NAME
-from backend.src.chatbot.tools import HansardRetrievalTool
+from config.settings import EMBEDDING_MODEL_NAME, FAST_LLM_MODEL_NAME, LLM_MODEL_NAME
+from src.chatbot.tools import HansardRetrievalTool
 
 llm = ChatOpenAI(model=LLM_MODEL_NAME, temperature=0.0, top_p=1.0)
 fast_llm = ChatOpenAI(model=FAST_LLM_MODEL_NAME, temperature=0.0, top_p=1.0)
