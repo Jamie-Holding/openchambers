@@ -132,12 +132,13 @@ class HansardRetrievalTool:
         Returns:
             List of Utterance objects ordered by BM25 relevance.
         """
-        score_expr = UtteranceChunk.chunk_text.op("<@>")(query)
+        bm25_query = func.to_bm25query(query, "utterance_chunk_bm25_idx")
+        score_expr = UtteranceChunk.chunk_text.op("<@>")(bm25_query)
 
         with Session(self.engine) as session:
             stmt = (
                 select(UtteranceChunk.utterance_id, score_expr.label("score"))
-                .order_by("score")
+                .order_by(score_expr)
                 .limit(self.top_k * 3)
             )
 
