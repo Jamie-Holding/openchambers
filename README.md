@@ -154,13 +154,20 @@ curl -L -o backend/data/hansard/metadata/policies.json \
 
 ### 4. Ingest data
 
-Edit the start date in *backend/scripts/add_debates_to_db.py*, then run against the running backend container:
-
 ```bash
-# Process debates and generate embeddings
+# Process debates from 2025-01-01 onwards (default)
 docker compose exec backend python3 -m scripts.add_debates_to_db
 
-# Load metadata (people, votes, policies)
+# Process a specific date range
+docker compose exec backend python3 -m scripts.add_debates_to_db --start-date 2024-01-01 --end-date 2024-12-31
+
+# Drop all tables and reingest from scratch (clears checkpoint; preserves summariser cache)
+docker compose exec backend python3 -m scripts.add_debates_to_db --reset
+
+# Clear the LLM summariser cache (forces re-summarisation of long statements)
+docker compose exec backend python3 -m scripts.add_debates_to_db --clear-cache
+
+# Load metadata (people, votes, policies) — run after debates are ingested
 docker compose exec backend python3 -m scripts.add_metadata_to_db
 ```
 

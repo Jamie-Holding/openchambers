@@ -26,8 +26,8 @@ class DebatePipeline:
         transformers: list[Any] | None,
         embedding_model: Any = None,
         batch_size: int = 50,
-        max_batches: int | None = None,
         start_date: str | None = None,
+        end_date: str | None = None,
         checkpoint_path: str | None = None,
     ) -> None:
         """Initialise the debate pipeline.
@@ -38,18 +38,16 @@ class DebatePipeline:
             transformers: List of transformers to apply to each batch.
             embedding_model: Model for generating embeddings.
             batch_size: Number of files per batch.
-            max_batches: Maximum batches to process (None for unlimited).
             start_date: Only process files from this date (YYYY-MM-DD).
+            end_date: Only process files up to this date (YYYY-MM-DD).
             checkpoint_path: Path for checkpoint file.
         """
         self.data_dir = data_dir
-        self.loader = Debates(source_path=data_dir, start_date=start_date)
+        self.loader = Debates(source_path=data_dir, start_date=start_date, end_date=end_date)
         self.repository = repository
         self.transformers = transformers or []
         self.embedding_model = embedding_model
         self.batch_size = batch_size
-        self.start_date = start_date
-        self.max_batches = max_batches
         self.checkpoint_path = checkpoint_path or DEFAULT_CHECKPOINT_PATH
         self._processed_files = self._load_checkpoint()
 
@@ -96,9 +94,6 @@ class DebatePipeline:
         failed_batches = 0
 
         for batch_number, batch_df in enumerate(self.loader.iter_batches(self.batch_size)):
-            if self.max_batches is not None and batches_processed >= self.max_batches:
-                break
-
             # Get unique files in this batch to check against checkpoint.
             batch_files = set(batch_df["xml_path"].unique())
 

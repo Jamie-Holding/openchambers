@@ -5,20 +5,15 @@ import logging
 from sqlalchemy import Engine, create_engine, text
 
 from config.settings import DATABASE_URL
-from src.data.database.models import (
-    Base,
-    Division,
-    Membership,
-    MPPolicySummary,
-    Person,
-    Vote,
-)
+from src.data.database.models import Base
 
 logger = logging.getLogger(__name__)
 
 
 def init_db() -> Engine:
-    """Initialise the database engine and ensure required extensions exist.
+    """Initialise the database: extensions, tables, and indexes.
+
+    All operations are idempotent — safe to call on every startup.
 
     Returns:
         SQLAlchemy engine connected to the database.
@@ -30,43 +25,15 @@ def init_db() -> Engine:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_textsearch"))
         conn.commit()
 
-    # Ensure all tables exist (idempotent — only creates missing tables)
     Base.metadata.create_all(engine)
 
-    return engine
-
-
-def reset_db(drop: bool = True) -> None:
-    """Drop and recreate all tables based on current SQLAlchemy models.
-
-    Args:
-        drop: If True, drop existing tables before recreating.
-
-    Warning:
-        This will delete ALL data in the database when drop=True.
-    """
-    engine = init_db()
-
-    if drop:
-        # Drop all tables
-        Base.metadata.drop_all(engine)
-        logger.info("All tables dropped.")
-
-    # Recreate all tables
-    Base.metadata.create_all(engine)
-    logger.info("All tables recreated.")
-
-    # Create indexes for performance
     with engine.connect() as conn:
-        # B-tree index on chunk_id for faster joins between embedding and utterance_chunk
         conn.execute(
             text("""
                 CREATE INDEX IF NOT EXISTS embedding_chunk_id_idx
                 ON embedding (chunk_id)
             """)
         )
-
-        # HNSW index for approximate nearest neighbour search using inner product
         conn.execute(
             text("""
                 CREATE INDEX IF NOT EXISTS embedding_embedding_hnsw_ip_idx
@@ -75,8 +42,6 @@ def reset_db(drop: bool = True) -> None:
                 WITH (m = 16, ef_construction = 64)
             """)
         )
-
-        # BM25 index for lexical search on chunk text
         conn.execute(
             text("""
                 CREATE INDEX IF NOT EXISTS utterance_chunk_bm25_idx
@@ -85,27 +50,19 @@ def reset_db(drop: bool = True) -> None:
                 WITH (text_config = 'english')
             """)
         )
-
         conn.commit()
-        logger.info("Indexes created.")
+
+    return engine
 
 
-def reset_metadata_tables() -> None:
-    """Drop and recreate metadata tables only (person, membership, division, vote, mp_policy_summary).
+def reset_db() -> Engine:
+    """Drop all tables and recreate from scratch.
 
-    This preserves other tables like utterances and embeddings while allowing
-    schema changes to metadata tables.
+    Warning:
+        This deletes ALL data. After reset, re-run both ingestion scripts:
+        debates first, then metadata (to populate party_at_time).
     """
-    engine = init_db()
-    metadata_tables = [MPPolicySummary, Vote, Division, Membership, Person]
-
-    # Drop tables in order (respecting foreign key constraints)
-    for table in metadata_tables:
-        table.__table__.drop(engine, checkfirst=True)
-    logger.info("Metadata tables dropped.")
-
-    # Recreate tables
-    for table in reversed(metadata_tables):
-        table.__table__.create(engine, checkfirst=True)
-    logger.info("Metadata tables recreated.")
-
+    engine = create_engine(DATABASE_URL, echo=False, future=True)
+    Base.metadata.drop_all(engine)
+    logger.info("All tables dropped.")
+    return init_db()

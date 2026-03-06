@@ -1,6 +1,6 @@
 import logging
 
-from src.data.db import init_db, reset_metadata_tables
+from src.data.db import init_db
 from src.data.database.metadata import MetadataRepository
 from src.data.pipelines.metadata_pipeline import MetadataPipeline
 
@@ -15,28 +15,13 @@ logger = logging.getLogger(__name__)
 if __name__ == "__main__":
     logger.info("Starting metadata ingestion pipeline...")
 
-    # -----------------------------------------------------
-    # Initialize the database engine
-    # -----------------------------------------------------
     engine = init_db()
 
-    # -----------------------------------------------------
-    # Initialize repository
-    # -----------------------------------------------------
-    metadata_repo = MetadataRepository(engine=engine)
-
-    # -----------------------------------------------------
-    # Initialize pipeline
-    # -----------------------------------------------------
     pipeline = MetadataPipeline(
         metadata_dir="data/hansard/metadata",
-        repository=metadata_repo
+        repository=MetadataRepository(engine=engine),
     )
 
-    # -----------------------------------------------------
-    # Reset metadata tables and run pipeline
-    # -----------------------------------------------------
-    reset_metadata_tables()
     pipeline.run()
 
     logger.info("Metadata ingestion pipeline completed.")

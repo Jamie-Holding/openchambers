@@ -17,19 +17,23 @@ logger = logging.getLogger(__name__)
 class Debates(BaseLoader):
     """Loader for TheyWorkForYou Hansard XML files."""
 
-    def __init__(self, source_path: str, start_date: str | None = None) -> None:
+    def __init__(self, source_path: str, start_date: str | None = None, end_date: str | None = None) -> None:
         """Initialise the debates loader.
 
         Args:
             source_path: Directory containing the XML debate files.
-            start_date: Optional date (YYYY-MM-DD) to filter files from.
+            start_date: Optional date (YYYY-MM-DD) to filter files from (inclusive).
+            end_date: Optional date (YYYY-MM-DD) to filter files up to (inclusive).
         """
         super().__init__(source_path)
         all_files = [f for f in os.listdir(source_path) if f.endswith(".xml")]
         self.files = self._filter_latest_versions(all_files)
         if start_date is not None:
-            start_date_parsed = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
-            self.files = [f for f in self.files if datetime.datetime.strptime(self._extract_date(f), "%Y-%m-%d").date() >= start_date_parsed]
+            start = self._parse_date(start_date)
+            self.files = [f for f in self.files if self._file_date(f) >= start]
+        if end_date is not None:
+            end = self._parse_date(end_date)
+            self.files = [f for f in self.files if self._file_date(f) <= end]
         self.files = sorted(self.files)
 
     def load_batch(self, batch_number: int, batch_size: int) -> pd.DataFrame:
@@ -267,6 +271,14 @@ class Debates(BaseLoader):
         if not text:
             return None
         return " ".join(text.split())
+
+    def _parse_date(self, date_str: str) -> datetime.date:
+        """Parse a YYYY-MM-DD string into a date object."""
+        return datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+
+    def _file_date(self, filename: str) -> datetime.date:
+        """Return the date of a debate file as a date object."""
+        return self._parse_date(self._extract_date(filename))
 
     def _extract_date(self, xml_path: str) -> str:
         """Extract the date from the XML filename.
