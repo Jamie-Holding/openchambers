@@ -9,7 +9,6 @@ from pathlib import Path
 import pandas as pd
 from openai import AsyncOpenAI
 from tqdm.asyncio import tqdm_asyncio
-from transformers import AutoTokenizer
 
 from src.data.transformers.base import BaseTransformer
 
@@ -46,7 +45,7 @@ class StatementSummarizer(BaseTransformer):
     def __init__(
         self,
         model: str = "gpt-4o-mini",
-        token_threshold: int = 100,
+        summarisation_threshold_chars: int = 500,
         target_tokens: int = 50,
         cache_path: str | None = None,
         include_statement: bool = False,
@@ -58,7 +57,7 @@ class StatementSummarizer(BaseTransformer):
 
         Args:
             model: OpenAI model name to use for summarization.
-            token_threshold: Summarize text exceeding this token count.
+            summarisation_threshold_chars: Summarize text exceeding this character count.
             target_tokens: Target length for summaries.
             cache_path: Path to the persistent cache file.
             include_statement: Whether to summarize statement_text fields.
@@ -67,9 +66,8 @@ class StatementSummarizer(BaseTransformer):
             max_concurrent: Maximum concurrent API requests (for rate limiting).
         """
         self.client = AsyncOpenAI()
-        self.tokenizer = AutoTokenizer.from_pretrained("gpt2")
         self.model = model
-        self.token_threshold = token_threshold
+        self.summarisation_threshold_chars = summarisation_threshold_chars
         self.target_tokens = target_tokens
         self.cache_path = cache_path or self.DEFAULT_CACHE_PATH
         self.include_statement = include_statement
@@ -175,8 +173,7 @@ class StatementSummarizer(BaseTransformer):
         if pd.isna(text) or not text:
             return text
 
-        token_count = len(self.tokenizer.encode(text))
-        if token_count <= self.token_threshold:
+        if len(text) <= self.summarisation_threshold_chars:
             stats["skipped"] += 1
             return text
 
