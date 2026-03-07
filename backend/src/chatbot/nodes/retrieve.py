@@ -36,23 +36,27 @@ async def retrieve_node(state: AgentState) -> dict:
     quote_tasks = []
     if active_context.search_query:
         for combo in _build_filter_combos(active_context):
-            quote_tasks.append(asyncio.to_thread(
-                hansard_tool.fetch,
-                query=active_context.search_query,
-                date_from=active_context.date_from,
-                date_to=active_context.date_to,
-                **combo,
-            ))
+            quote_tasks.append(
+                asyncio.to_thread(
+                    hansard_tool.fetch,
+                    query=active_context.search_query,
+                    date_from=active_context.date_from,
+                    date_to=active_context.date_to,
+                    **combo,
+                )
+            )
 
     # Vote retrieval - one task per person_id
     vote_tasks = []
     if need_votes and active_context.person_ids and active_context.search_query:
         for person_id in active_context.person_ids:
-            vote_tasks.append(asyncio.to_thread(
-                hansard_tool.get_mp_voting_record,
-                person_id=person_id,
-                search_term=active_context.search_query,
-            ))
+            vote_tasks.append(
+                asyncio.to_thread(
+                    hansard_tool.get_mp_voting_record,
+                    person_id=person_id,
+                    search_term=active_context.search_query,
+                )
+            )
 
     quote_batches, vote_batches = await asyncio.gather(
         asyncio.gather(*quote_tasks),

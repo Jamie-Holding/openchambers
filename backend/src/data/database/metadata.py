@@ -58,7 +58,9 @@ class MetadataRepository(BaseRepository):
         records = people_df.to_dict(orient="records")
         self._insert_batched(records, Person, "Inserting people", batch_size)
 
-    def insert_memberships(self, memberships_df: pd.DataFrame, batch_size: int = 1000) -> None:
+    def insert_memberships(
+        self, memberships_df: pd.DataFrame, batch_size: int = 1000
+    ) -> None:
         """Insert membership records into the database.
 
         Args:
@@ -68,7 +70,9 @@ class MetadataRepository(BaseRepository):
         records = memberships_df.to_dict(orient="records")
         self._insert_batched(records, Membership, "Inserting memberships", batch_size)
 
-    def insert_divisions(self, divisions_df: pd.DataFrame, batch_size: int = 1000) -> dict[str, int]:
+    def insert_divisions(
+        self, divisions_df: pd.DataFrame, batch_size: int = 1000
+    ) -> dict[str, int]:
         """Insert division records into the database.
 
         Args:
@@ -128,7 +132,9 @@ class MetadataRepository(BaseRepository):
             batch_size: Number of records to insert per batch.
         """
         records = summaries_df.to_dict(orient="records")
-        self._insert_batched(records, MPPolicySummary, "Inserting policy summaries", batch_size)
+        self._insert_batched(
+            records, MPPolicySummary, "Inserting policy summaries", batch_size
+        )
 
     def update_party_at_time(self) -> None:
         """Update 'party_at_time' column in utterances based on memberships.
@@ -140,12 +146,14 @@ class MetadataRepository(BaseRepository):
             Memberships and utterances must be inserted first.
         """
         with self.Session() as session:
-            session.execute(text("""
+            session.execute(
+                text("""
                 UPDATE utterance u
                 SET party_at_time = m.party
                 FROM membership m
                 WHERE u.person_id = m.person_id
                   AND u.date >= m.start_date
                   AND u.date <= m.end_date;
-            """))
+            """)
+            )
             session.commit()

@@ -53,13 +53,17 @@ class EmbeddingFormatter(BaseTransformer):
         """
         df["utterance"] = df.apply(self._format_utterance, axis=1)
         df["utterance_embedding_formatted"] = df["utterance"]
-        df["token_count"] = df["utterance_embedding_formatted"].apply(self._count_tokens)
+        df["token_count"] = df["utterance_embedding_formatted"].apply(
+            self._count_tokens
+        )
         df["is_truncated"] = df["token_count"] > self.max_seq_length
 
         # Report truncation statistics
         total_utterances = len(df)
         truncated_count = df["is_truncated"].sum()
-        truncation_ratio = truncated_count / total_utterances if total_utterances > 0 else 0.0
+        truncation_ratio = (
+            truncated_count / total_utterances if total_utterances > 0 else 0.0
+        )
         logger.info(
             f"Truncation report: {truncated_count}/{total_utterances} utterances "
             f"({truncation_ratio:.2%}) exceed {self.max_seq_length} token limit"
@@ -112,13 +116,13 @@ class EmbeddingFormatter(BaseTransformer):
 
         # Build speaker attribution inline
         speaker_info = ""
-        if pd.notna(row.get('speakername')):
-            speaker_info = row['speakername']
-            if pd.notna(row.get('speakeroffice')):
+        if pd.notna(row.get("speakername")):
+            speaker_info = row["speakername"]
+            if pd.notna(row.get("speakeroffice")):
                 speaker_info += f" ({row['speakeroffice']})"
 
         # The utterance itself (at the top)
-        text = row.get('utterance')
+        text = row.get("utterance")
         if pd.notna(text):
             if speaker_info:
                 sections.append(f"{speaker_info}: {text}")
@@ -129,37 +133,47 @@ class EmbeddingFormatter(BaseTransformer):
         context_parts = []
 
         # 1. Question/statement context (most important for understanding answers)
-        if row.get('is_answer'):
-            if self.include_context_question and pd.notna(row.get('context_question_text')):
-                cq_speaker = row.get('context_question_speaker', 'Unknown')
-                cq_type = row.get('context_question_type', 'supplementary')
-                cq_text = row['context_question_text']
-                label = self._summary_label(cq_text, row.get('original_context_question_text'))
-                prefix = "Responding to intervention from" if cq_type == "intervention" else "Responding to"
+        if row.get("is_answer"):
+            if self.include_context_question and pd.notna(
+                row.get("context_question_text")
+            ):
+                cq_speaker = row.get("context_question_speaker", "Unknown")
+                cq_type = row.get("context_question_type", "supplementary")
+                cq_text = row["context_question_text"]
+                label = self._summary_label(
+                    cq_text, row.get("original_context_question_text")
+                )
+                prefix = (
+                    "Responding to intervention from"
+                    if cq_type == "intervention"
+                    else "Responding to"
+                )
                 context_parts.append(f"{prefix} {cq_speaker}{label}: {cq_text}")
-            if self.include_main_question and pd.notna(row.get('question_text')):
-                q_speaker = row.get('question_speaker', 'Unknown')
-                q_text = row['question_text']
-                label = self._summary_label(q_text, row.get('original_question_text'))
-                context_parts.append(f"Main parliamentary question from {q_speaker}{label}: {q_text}")
-            if self.include_statement and pd.notna(row.get('statement_text')):
-                s_speaker = row.get('statement_speaker', 'Unknown')
-                s_text = row['statement_text']
-                label = self._summary_label(s_text, row.get('original_statement_text'))
+            if self.include_main_question and pd.notna(row.get("question_text")):
+                q_speaker = row.get("question_speaker", "Unknown")
+                q_text = row["question_text"]
+                label = self._summary_label(q_text, row.get("original_question_text"))
+                context_parts.append(
+                    f"Main parliamentary question from {q_speaker}{label}: {q_text}"
+                )
+            if self.include_statement and pd.notna(row.get("statement_text")):
+                s_speaker = row.get("statement_speaker", "Unknown")
+                s_text = row["statement_text"]
+                label = self._summary_label(s_text, row.get("original_statement_text"))
                 context_parts.append(f"Statement from {s_speaker}{label}: {s_text}")
 
         # 2. Topic and department
-        if pd.notna(row.get('minor_heading')):
+        if pd.notna(row.get("minor_heading")):
             context_parts.append(f"Topic: {row['minor_heading']}")
-        if pd.notna(row.get('major_heading')):
+        if pd.notna(row.get("major_heading")):
             context_parts.append(f"Department: {row['major_heading']}")
 
         # 3. Session info
-        if pd.notna(row.get('oral_heading')):
+        if pd.notna(row.get("oral_heading")):
             context_parts.append(f"Session: {row['oral_heading']}")
 
         # 4. Date (least important)
-        if pd.notna(row.get('date')):
+        if pd.notna(row.get("date")):
             context_parts.append(f"Date: {row['date']}")
 
         if context_parts:

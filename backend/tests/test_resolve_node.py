@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
-from src.chatbot.messages.resolve import PERSON_DISAMBIGUATION, PERSON_NOT_FOUND
 from src.chatbot.nodes.resolve import (
     _merge_context,
     _resolve_people,
@@ -14,10 +13,16 @@ from src.chatbot.nodes.resolve import (
 )
 from src.chatbot.schemas import ActiveContext, ContextUpdate
 
-SINGLE_MATCH = [{"person_id": 101, "display_name": "Keir Starmer", "current_party": "labour"}]
+SINGLE_MATCH = [
+    {"person_id": 101, "display_name": "Keir Starmer", "current_party": "labour"}
+]
 DIFFERENT_NAMES_MATCH = [
     {"person_id": 201, "display_name": "David Davis", "current_party": "conservative"},
-    {"person_id": 202, "display_name": "David T.C. Davies", "current_party": "conservative"},
+    {
+        "person_id": 202,
+        "display_name": "David T.C. Davies",
+        "current_party": "conservative",
+    },
 ]
 SAME_NAME_MATCH = [
     {"person_id": 301, "display_name": "John Smith", "current_party": "labour"},
@@ -28,6 +33,7 @@ SAME_NAME_MATCH = [
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def mock_hansard_tool(monkeypatch):
@@ -62,8 +68,8 @@ def _make_state(message="test", **overrides):
 # _merge_context
 # ---------------------------------------------------------------------------
 
-class TestMergeContext:
 
+class TestMergeContext:
     def test_new_query_replaces_entirely(self):
         existing = ActiveContext(
             person_names=["Old Person"],
@@ -134,8 +140,8 @@ class TestMergeContext:
 # _resolve_people
 # ---------------------------------------------------------------------------
 
-class TestResolvePeople:
 
+class TestResolvePeople:
     def test_single_match_sets_person_id(self, mock_hansard_tool):
         mock_hansard_tool.list_people.return_value = SINGLE_MATCH
         ctx = ActiveContext(person_names=["Keir Starmer"])
@@ -175,8 +181,8 @@ class TestResolvePeople:
 # _resolve_person_disambiguation
 # ---------------------------------------------------------------------------
 
-class TestResolvePersonDisambiguation:
 
+class TestResolvePersonDisambiguation:
     def test_selects_by_number(self, mock_hansard_tool):
         mock_hansard_tool.list_people.return_value = DIFFERENT_NAMES_MATCH
         ctx = ActiveContext(person_names=["David Davis"])
@@ -235,16 +241,21 @@ class TestResolvePersonDisambiguation:
 # resolve_node - full node
 # ---------------------------------------------------------------------------
 
-class TestResolveNode:
 
+class TestResolveNode:
     @pytest.mark.asyncio
     async def test_happy_path(self, mock_hansard_tool, mock_parse_dates):
         mock_hansard_tool.list_people.return_value = SINGLE_MATCH
         mock_parse_dates.return_value = ("2025-01-01", "2025-12-31", None)
 
-        result = await resolve_node(_make_state(
-            context_update={"person_names": ["Keir Starmer"], "date_text": "in 2025"},
-        ))
+        result = await resolve_node(
+            _make_state(
+                context_update={
+                    "person_names": ["Keir Starmer"],
+                    "date_text": "in 2025",
+                },
+            )
+        )
 
         assert result["last_turn_was_ai_question"] is False
         ctx = result["active_context"]
@@ -256,9 +267,11 @@ class TestResolveNode:
     async def test_person_not_found_asks(self, mock_hansard_tool, mock_parse_dates):
         mock_hansard_tool.list_people.return_value = []
 
-        result = await resolve_node(_make_state(
-            context_update={"person_names": ["Nobody"]},
-        ))
+        result = await resolve_node(
+            _make_state(
+                context_update={"person_names": ["Nobody"]},
+            )
+        )
 
         assert result["last_turn_was_ai_question"] is True
         assert isinstance(result["messages"][0], AIMessage)
@@ -268,23 +281,29 @@ class TestResolveNode:
     async def test_disambiguation_asks(self, mock_hansard_tool, mock_parse_dates):
         mock_hansard_tool.list_people.return_value = DIFFERENT_NAMES_MATCH
 
-        result = await resolve_node(_make_state(
-            context_update={"person_names": ["David Davis"]},
-        ))
+        result = await resolve_node(
+            _make_state(
+                context_update={"person_names": ["David Davis"]},
+            )
+        )
 
         assert result["last_turn_was_ai_question"] is True
         assert "David T.C. Davies" in result["messages"][0].content
 
     @pytest.mark.asyncio
-    async def test_answer_to_question_resolves(self, mock_hansard_tool, mock_parse_dates):
+    async def test_answer_to_question_resolves(
+        self, mock_hansard_tool, mock_parse_dates
+    ):
         mock_hansard_tool.list_people.return_value = DIFFERENT_NAMES_MATCH
         mock_parse_dates.return_value = (None, None, None)
 
-        result = await resolve_node(_make_state(
-            message="1",
-            user_intent="answer_to_question",
-            active_context=ActiveContext(person_names=["David Davis"]),
-        ))
+        result = await resolve_node(
+            _make_state(
+                message="1",
+                user_intent="answer_to_question",
+                active_context=ActiveContext(person_names=["David Davis"]),
+            )
+        )
 
         assert result["last_turn_was_ai_question"] is False
         assert result["active_context"].person_ids == [201]
@@ -294,14 +313,19 @@ class TestResolveNode:
 # Integration tests (real DB - run with: pytest -m integration)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.integration
 class TestResolveNodeIntegration:
-
     @pytest.mark.asyncio
     async def test_resolves_real_mp(self):
-        result = await resolve_node(_make_state(
-            context_update={"person_names": ["Keir Starmer"], "search_query": "housing"},
-        ))
+        result = await resolve_node(
+            _make_state(
+                context_update={
+                    "person_names": ["Keir Starmer"],
+                    "search_query": "housing",
+                },
+            )
+        )
         assert result["last_turn_was_ai_question"] is False
         assert len(result["active_context"].person_ids) == 1
         assert result["active_context"].person_ids[0] > 0

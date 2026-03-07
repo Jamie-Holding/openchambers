@@ -4,12 +4,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 
 # LangChain/Graph imports
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from psycopg_pool import AsyncConnectionPool
 from psycopg.rows import dict_row
+from psycopg_pool import AsyncConnectionPool
+from pydantic import BaseModel
 
 # Local imports
 from config.settings import DATABASE_URL
@@ -21,18 +21,19 @@ logger = logging.getLogger(__name__)
 # Standardize URI for psycopg compatibility
 DATABASE_URL = DATABASE_URL.replace("+psycopg2", "").replace("+psycopg", "")
 
+
 # --- Lifespan Management ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
     Manages the database connection pool and agent initialization.
-    The 'yield' must stay inside the 'async with' block to keep the 
+    The 'yield' must stay inside the 'async with' block to keep the
     connections open while the app is running.
     """
     async with AsyncConnectionPool(
-            conninfo=DATABASE_URL,
-            max_size=5,
-            kwargs={"autocommit": True, "row_factory": dict_row}
+        conninfo=DATABASE_URL,
+        max_size=5,
+        kwargs={"autocommit": True, "row_factory": dict_row},
     ) as pool:
         # Initialize the LangGraph checkpointer
         checkpointer = AsyncPostgresSaver(pool)
@@ -43,10 +44,11 @@ async def lifespan(app: FastAPI):
         app.state.pool = pool
 
         logger.info("Backend services started: Database pool and Agent initialized.")
-        
+
         yield  # <--- Application handles requests here
-        
+
     logger.info("Backend services shut down: Database pool closed.")
+
 
 # --- App Initialization ---
 app = FastAPI(lifespan=lifespan)
@@ -60,20 +62,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # --- Data Models ---
 class ChatRequest(BaseModel):
     message: str
     thread_id: str
+
 
 # --- Routes ---
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
 
+
 @app.post("/chat")
 async def chat_endpoint(req: ChatRequest, request: Request):
     """
-    Endpoint to stream agent responses. 
+    Endpoint to stream agent responses.
     Accesses the pre-compiled graph from the application state.
     """
     # Use request.app.state to ensure we get the objects from lifespan
@@ -81,11 +86,7 @@ async def chat_endpoint(req: ChatRequest, request: Request):
 
     async def event_generator():
         try:
-            async for token in ask_agent(
-                graph,
-                req.thread_id,
-                req.message
-            ):
+            async for token in ask_agent(graph, req.thread_id, req.message):
                 yield token
         except Exception:
             logger.exception("Streaming chat failed")
@@ -98,5 +99,5 @@ async def chat_endpoint(req: ChatRequest, request: Request):
             "X-Accel-Buffering": "no",
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
-        }
+        },
     )

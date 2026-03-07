@@ -4,8 +4,8 @@ import logging
 from sentence_transformers import SentenceTransformer
 
 from config.settings import EMBEDDING_MODEL_NAME
-from src.data.db import init_db, reset_db
 from src.data.database.utterance import UtteranceRepository
+from src.data.db import init_db, reset_db
 from src.data.pipelines.debate_pipeline import DebatePipeline
 from src.data.transformers.chunking_transformer import ChunkingTransformer
 from src.data.transformers.embedding_text_formatter import EmbeddingFormatter
@@ -20,12 +20,14 @@ logger = logging.getLogger(__name__)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Ingest Hansard debates into the database.")
+    parser = argparse.ArgumentParser(
+        description="Ingest Hansard debates into the database."
+    )
     parser.add_argument(
         "--reset",
         action="store_true",
         help="Drop ALL tables and start fresh. Also clears checkpoint. "
-             "Re-run metadata ingestion afterwards.",
+        "Re-run metadata ingestion afterwards.",
     )
     parser.add_argument(
         "--clear-checkpoint",
@@ -64,18 +66,18 @@ if __name__ == "__main__":
     INCLUDE_CONTEXTS = {
         "include_statement": False,
         "include_main_question": True,
-        "include_context_question": True
+        "include_context_question": True,
     }
     statement_summarizer = StatementSummarizer(
         model="gpt-4o-mini",
         summarisation_threshold_chars=500,
         cache_path="data/processed/.statement_summaries_cache.json",
-        **INCLUDE_CONTEXTS
+        **INCLUDE_CONTEXTS,
     )
     embedding_formatter = EmbeddingFormatter(
         model_name=EMBEDDING_MODEL_NAME,
         max_seq_length=embedding_model.max_seq_length,
-        **INCLUDE_CONTEXTS
+        **INCLUDE_CONTEXTS,
     )
     chunking_transformer = ChunkingTransformer(
         model_name=EMBEDDING_MODEL_NAME,
@@ -91,7 +93,7 @@ if __name__ == "__main__":
         embedding_model=embedding_model,
         batch_size=args.batch_size,
         start_date=args.start_date,
-        end_date=args.end_date
+        end_date=args.end_date,
     )
 
     if args.reset or args.clear_checkpoint:

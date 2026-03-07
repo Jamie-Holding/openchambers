@@ -41,10 +41,12 @@ async def generate_node(state: AgentState) -> dict:
     if not quotes and not votes:
         return {"messages": [AIMessage(content=NO_RESULTS)]}
 
-    system = SystemMessage(content=GENERATE_PROMPT.format(
-        quotes_json=json.dumps(quotes, indent=2) if quotes else "None",
-        votes_json=json.dumps(votes, indent=2) if votes else "None",
-    ))
+    system = SystemMessage(
+        content=GENERATE_PROMPT.format(
+            quotes_json=json.dumps(quotes, indent=2) if quotes else "None",
+            votes_json=json.dumps(votes, indent=2) if votes else "None",
+        )
+    )
 
     recent_messages = _prepare_messages(state)
     response = await llm.ainvoke([system, *recent_messages])

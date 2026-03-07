@@ -88,7 +88,7 @@ class StatementSummarizer(BaseTransformer):
                 data = json.loads(path.read_text())
                 logger.info(f"Loaded summary cache: {len(data)} entries")
                 return data
-            except (json.JSONDecodeError, IOError) as e:
+            except (OSError, json.JSONDecodeError) as e:
                 logger.warning(f"Failed to load summary cache: {e}. Starting fresh.")
         return {}
 
@@ -136,7 +136,9 @@ class StatementSummarizer(BaseTransformer):
 
             if field in df.columns:
                 texts = df[field].tolist()
-                results = await self._process_batch(texts, text_type, semaphore, stats, field)
+                results = await self._process_batch(
+                    texts, text_type, semaphore, stats, field
+                )
                 df[field] = results
 
         logger.info(
@@ -155,8 +157,7 @@ class StatementSummarizer(BaseTransformer):
     ) -> list[str]:
         """Process a batch of texts concurrently."""
         tasks = [
-            self._process_text(text, text_type, semaphore, stats)
-            for text in texts
+            self._process_text(text, text_type, semaphore, stats) for text in texts
         ]
         results = await tqdm_asyncio.gather(*tasks, desc=f"Summarizing {field}")
         self._save_cache()

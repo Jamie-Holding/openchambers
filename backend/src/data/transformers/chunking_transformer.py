@@ -89,10 +89,14 @@ class ChunkingTransformer(BaseTransformer):
             else:
                 # Multiple chunks needed - account for context tokens
                 context_tokens = self._count_tokens(context)
-                available_for_content = self.max_seq_length - context_tokens - 10  # buffer
+                available_for_content = (
+                    self.max_seq_length - context_tokens - 10
+                )  # buffer
                 effective_chunk_size = min(self.chunk_size, available_for_content)
 
-                chunks = self._create_chunks(content, original_text, effective_chunk_size)
+                chunks = self._create_chunks(
+                    content, original_text, effective_chunk_size
+                )
                 for chunk_idx, chunk_info in enumerate(chunks):
                     chunk_row = row.to_dict()
                     chunk_row["chunk_index"] = chunk_idx

@@ -11,6 +11,7 @@ EMBEDDING_DIM = 384
 
 class Utterance(Base):
     """A single utterance or speech segment in the Hansard record."""
+
     __tablename__ = "utterance"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -67,7 +68,10 @@ class UtteranceChunk(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     utterance_id = Column(
-        Integer, ForeignKey("utterance.id", ondelete="CASCADE"), nullable=False, index=True
+        Integer,
+        ForeignKey("utterance.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     chunk_index = Column(Integer, nullable=False)
     chunk_text = Column(Text, nullable=False)
@@ -98,6 +102,7 @@ class Embedding(Base):
 
 class Person(Base):
     """A person who has spoken in Parliament."""
+
     __tablename__ = "person"
 
     id = Column(Integer, primary_key=True)
@@ -108,6 +113,7 @@ class Person(Base):
 
 class Membership(Base):
     """A continuous parliamentary membership (party + seat) for a person."""
+
     __tablename__ = "membership"
 
     membership_id = Column(String, primary_key=True, index=True)
@@ -133,6 +139,7 @@ class Membership(Base):
 
 class Division(Base):
     """A parliamentary division (a vote event)."""
+
     __tablename__ = "division"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -140,16 +147,22 @@ class Division(Base):
     vote_date = Column(Date, nullable=False)
     description = Column(Text, nullable=False)
 
-    votes = relationship("Vote", back_populates="division", cascade="all, delete-orphan")
+    votes = relationship(
+        "Vote", back_populates="division", cascade="all, delete-orphan"
+    )
 
 
 class Vote(Base):
     """An individual MP's vote in a parliamentary division."""
+
     __tablename__ = "vote"
 
     id = Column(Integer, primary_key=True, index=True)
     division_id = Column(
-        Integer, ForeignKey("division.id", ondelete="CASCADE"), nullable=False, index=True
+        Integer,
+        ForeignKey("division.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     person_id = Column(Integer, nullable=False, index=True)
     membership_id = Column(String, nullable=False)

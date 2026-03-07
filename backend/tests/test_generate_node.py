@@ -1,7 +1,6 @@
 """Unit and integration tests for the generate node."""
 
-import json
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
@@ -20,8 +19,13 @@ MOCK_QUOTE = {
     "speaker": {"name": "Chris Hinchliff", "office": None},
     "party": "labour",
     "speech_id": 1,
-    "context": {"topic": "Housing", "department": None, "session": None,
-                "main_question": None, "context_question": None},
+    "context": {
+        "topic": "Housing",
+        "department": None,
+        "session": None,
+        "main_question": None,
+        "context_question": None,
+    },
 }
 MOCK_VOTE = {
     "person_id": 101,
@@ -63,11 +67,14 @@ FULL_AI_RESPONSE = (
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def mock_llm(monkeypatch):
     """Replace the llm in generate module with a mock."""
     mock_llm_instance = AsyncMock()
-    mock_llm_instance.ainvoke.return_value = AIMessage(content="SUMMARY:\n- Mocked response.")
+    mock_llm_instance.ainvoke.return_value = AIMessage(
+        content="SUMMARY:\n- Mocked response."
+    )
     monkeypatch.setattr("src.chatbot.nodes.generate.llm", mock_llm_instance)
     return mock_llm_instance
 
@@ -88,8 +95,8 @@ def _make_state(message="What about housing?", **overrides):
 # _truncate_ai_message
 # ---------------------------------------------------------------------------
 
-class TestTruncateAiMessage:
 
+class TestTruncateAiMessage:
     def test_strips_evidence_section(self):
         result = _truncate_ai_message(FULL_AI_RESPONSE)
         assert "SUMMARY:" in result
@@ -110,14 +117,16 @@ class TestTruncateAiMessage:
 # _prepare_messages
 # ---------------------------------------------------------------------------
 
-class TestPrepareMessages:
 
+class TestPrepareMessages:
     def test_truncates_ai_messages(self):
-        state = _make_state(messages=[
-            HumanMessage(content="What about housing?"),
-            AIMessage(content=FULL_AI_RESPONSE),
-            HumanMessage(content="Tell me more"),
-        ])
+        state = _make_state(
+            messages=[
+                HumanMessage(content="What about housing?"),
+                AIMessage(content=FULL_AI_RESPONSE),
+                HumanMessage(content="Tell me more"),
+            ]
+        )
         result = _prepare_messages(state)
         ai_msg = result[1]
         assert isinstance(ai_msg, AIMessage)
@@ -125,10 +134,12 @@ class TestPrepareMessages:
         assert "SUMMARY:" in ai_msg.content
 
     def test_preserves_human_messages(self):
-        state = _make_state(messages=[
-            HumanMessage(content="First question"),
-            HumanMessage(content="Second question"),
-        ])
+        state = _make_state(
+            messages=[
+                HumanMessage(content="First question"),
+                HumanMessage(content="Second question"),
+            ]
+        )
         result = _prepare_messages(state)
         assert result[0].content == "First question"
         assert result[1].content == "Second question"
@@ -138,13 +149,15 @@ class TestPrepareMessages:
 # generate_node
 # ---------------------------------------------------------------------------
 
-class TestGenerateNode:
 
+class TestGenerateNode:
     @pytest.mark.asyncio
     async def test_happy_path(self, mock_llm):
-        result = await generate_node(_make_state(
-            retrieval_result={"quotes": [MOCK_QUOTE], "votes": []},
-        ))
+        result = await generate_node(
+            _make_state(
+                retrieval_result={"quotes": [MOCK_QUOTE], "votes": []},
+            )
+        )
 
         assert len(result["messages"]) == 1
         assert isinstance(result["messages"][0], AIMessage)
@@ -152,9 +165,11 @@ class TestGenerateNode:
 
     @pytest.mark.asyncio
     async def test_quotes_in_prompt(self, mock_llm):
-        await generate_node(_make_state(
-            retrieval_result={"quotes": [MOCK_QUOTE], "votes": []},
-        ))
+        await generate_node(
+            _make_state(
+                retrieval_result={"quotes": [MOCK_QUOTE], "votes": []},
+            )
+        )
 
         system_msg = mock_llm.ainvoke.call_args[0][0][0].content
         assert "Chris Hinchliff" in system_msg
@@ -162,9 +177,11 @@ class TestGenerateNode:
 
     @pytest.mark.asyncio
     async def test_votes_in_prompt(self, mock_llm):
-        await generate_node(_make_state(
-            retrieval_result={"quotes": [], "votes": [MOCK_VOTE]},
-        ))
+        await generate_node(
+            _make_state(
+                retrieval_result={"quotes": [], "votes": [MOCK_VOTE]},
+            )
+        )
 
         system_msg = mock_llm.ainvoke.call_args[0][0][0].content
         assert "Health Funding" in system_msg
@@ -172,9 +189,11 @@ class TestGenerateNode:
 
     @pytest.mark.asyncio
     async def test_no_results_skips_llm(self, mock_llm):
-        result = await generate_node(_make_state(
-            retrieval_result={"quotes": [], "votes": []},
-        ))
+        result = await generate_node(
+            _make_state(
+                retrieval_result={"quotes": [], "votes": []},
+            )
+        )
 
         assert result["messages"][0].content == NO_RESULTS
         mock_llm.ainvoke.assert_not_called()
@@ -188,14 +207,16 @@ class TestGenerateNode:
 
     @pytest.mark.asyncio
     async def test_conversation_history_included(self, mock_llm):
-        await generate_node(_make_state(
-            messages=[
-                HumanMessage(content="First question"),
-                AIMessage(content=FULL_AI_RESPONSE),
-                HumanMessage(content="Follow up"),
-            ],
-            retrieval_result={"quotes": [MOCK_QUOTE], "votes": []},
-        ))
+        await generate_node(
+            _make_state(
+                messages=[
+                    HumanMessage(content="First question"),
+                    AIMessage(content=FULL_AI_RESPONSE),
+                    HumanMessage(content="Follow up"),
+                ],
+                retrieval_result={"quotes": [MOCK_QUOTE], "votes": []},
+            )
+        )
 
         call_messages = mock_llm.ainvoke.call_args[0][0]
         # system + 3 conversation messages
@@ -209,14 +230,16 @@ class TestGenerateNode:
 # Integration tests (real LLM - run with: pytest -m integration)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.integration
 class TestGenerateNodeIntegration:
-
     @pytest.mark.asyncio
     async def test_real_llm_produces_summary_and_evidence(self):
-        result = await generate_node(_make_state(
-            retrieval_result={"quotes": [MOCK_QUOTE], "votes": []},
-        ))
+        result = await generate_node(
+            _make_state(
+                retrieval_result={"quotes": [MOCK_QUOTE], "votes": []},
+            )
+        )
         content = result["messages"][0].content
         assert "SUMMARY:" in content
         assert "EVIDENCE:" in content

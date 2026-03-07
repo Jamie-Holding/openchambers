@@ -1,7 +1,7 @@
 import logging
 
-from src.data.db import init_db
 from src.data.database.metadata import MetadataRepository
+from src.data.db import init_db
 from src.data.pipelines.metadata_pipeline import MetadataPipeline
 
 logging.basicConfig(

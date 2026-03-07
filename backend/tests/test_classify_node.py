@@ -15,6 +15,7 @@ MOCK_PARTIES = ["conservative", "labour", "liberal-democrat", "scottish-national
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def mock_llm(monkeypatch):
     """Replace the llm in classify module with a mock.
@@ -33,9 +34,7 @@ def mock_hansard_tool(monkeypatch):
     """Replace the hansard_tool in classify module with a mock."""
     mock_tool = MagicMock()
     mock_tool.list_parties.return_value = MOCK_PARTIES
-    monkeypatch.setattr(
-        "src.chatbot.nodes.classify.hansard_tool", mock_tool
-    )
+    monkeypatch.setattr("src.chatbot.nodes.classify.hansard_tool", mock_tool)
     return mock_tool
 
 
@@ -65,8 +64,8 @@ def _default_classification(**overrides):
 # Unit tests (mocked LLM)
 # ---------------------------------------------------------------------------
 
-class TestClassifyNode:
 
+class TestClassifyNode:
     @pytest.mark.asyncio
     async def test_returns_correct_shape(self, mock_llm, mock_hansard_tool):
         mock_llm.ainvoke.return_value = _default_classification(
@@ -80,7 +79,9 @@ class TestClassifyNode:
             need_votes=False,
         )
 
-        result = await classify_node(_make_state("What has Keir Starmer said about housing?"))
+        result = await classify_node(
+            _make_state("What has Keir Starmer said about housing?")
+        )
 
         assert result["user_intent"] == "new_query"
         assert result["need_votes"] is False
@@ -141,9 +142,7 @@ class TestClassifyNode:
             user_intent="answer_to_question"
         )
 
-        await classify_node(
-            _make_state("Keir Starmer", last_turn_was_ai_question=True)
-        )
+        await classify_node(_make_state("Keir Starmer", last_turn_was_ai_question=True))
 
         system_msg = mock_llm.ainvoke.call_args[0][0][0].content
         assert "Last turn was AI question: True" in system_msg
@@ -153,9 +152,9 @@ class TestClassifyNode:
 # Integration tests (real LLM — run with: pytest -m integration)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.integration
 class TestClassifyNodeIntegration:
-
     @pytest.mark.asyncio
     async def test_classifies_new_query(self):
         result = await classify_node(

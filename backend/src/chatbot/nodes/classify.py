@@ -19,11 +19,13 @@ async def classify_node(state: AgentState) -> dict:
     else:
         active_context_str = str(active_context)
 
-    system = SystemMessage(content=CLASSIFY_PROMPT.format(
-        parties=parties_str,
-        active_context=active_context_str,
-        last_turn_was_ai_question=state.get("last_turn_was_ai_question", False),
-    ))
+    system = SystemMessage(
+        content=CLASSIFY_PROMPT.format(
+            parties=parties_str,
+            active_context=active_context_str,
+            last_turn_was_ai_question=state.get("last_turn_was_ai_question", False),
+        )
+    )
 
     recent_messages = state["messages"][-MAX_MESSAGES:]
     classifier = fast_llm.with_structured_output(Classification)

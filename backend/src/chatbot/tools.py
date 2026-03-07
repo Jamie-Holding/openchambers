@@ -5,15 +5,15 @@ from sentence_transformers import SentenceTransformer
 from sqlalchemy import Float, and_, desc, func, literal, select, type_coerce
 from sqlalchemy.orm import Session
 
-from src.data.db import init_db
 from src.data.database.models import (
     Embedding,
     Membership,
+    MPPolicySummary,
     Person,
     Utterance,
     UtteranceChunk,
-    MPPolicySummary,
 )
+from src.data.db import init_db
 
 
 class HansardRetrievalTool:
@@ -52,15 +52,15 @@ class HansardRetrievalTool:
             if utterance_id not in best or score < best[utterance_id]:
                 best[utterance_id] = score
 
-        top_ids = sorted(best, key=lambda uid: best[uid])[:self.top_k]
+        top_ids = sorted(best, key=lambda uid: best[uid])[: self.top_k]
         if not top_ids:
             return []
 
         utterances = {
             u.id: u
-            for u in session.execute(
-                select(Utterance).where(Utterance.id.in_(top_ids))
-            ).scalars().all()
+            for u in session.execute(select(Utterance).where(Utterance.id.in_(top_ids)))
+            .scalars()
+            .all()
         }
         return [utterances[uid] for uid in top_ids if uid in utterances]
 
@@ -87,10 +87,10 @@ class HansardRetrievalTool:
         Returns:
             List of Utterance objects ordered by semantic similarity.
         """
-        effective_min_sim = min_similarity if min_similarity is not None else self.min_similarity
-        score_expr = type_coerce(
-            Embedding.embedding.op("<#>")(query_embedding), Float
+        effective_min_sim = (
+            min_similarity if min_similarity is not None else self.min_similarity
         )
+        score_expr = type_coerce(Embedding.embedding.op("<#>")(query_embedding), Float)
 
         with Session(self.engine) as session:
             stmt = (
@@ -213,21 +213,24 @@ class HansardRetrievalTool:
             or an empty list if no results were found.
         """
         embedding = self.model.encode([query], convert_to_numpy=True)[0]
-        filters = dict(party=party, person_id=person_id,
-                       date_from=date_from, date_to=date_to)
+        filters = dict(
+            party=party, person_id=person_id, date_from=date_from, date_to=date_to
+        )
 
         # Over-fetch so fusion has enough candidates to rerank
         saved_top_k = self.top_k
         self.top_k = max(self.top_k * 3, 50)
         try:
             vector_results = self._vector_search(
-                embedding, **filters, min_similarity=min_similarity)
+                embedding, **filters, min_similarity=min_similarity
+            )
             bm25_results = self._bm25_search(query, **filters)
         finally:
             self.top_k = saved_top_k
 
         fused = self._reciprocal_rank_fusion(
-            vector_results, bm25_results, top_k=self.top_k)
+            vector_results, bm25_results, top_k=self.top_k
+        )
         return [self._format_search_result(utt) for utt in fused]
 
     def fetch_bm25(
@@ -290,11 +293,15 @@ class HansardRetrievalTool:
                 "main_question": {
                     "speaker": utt.question_speaker,
                     "text": utt.original_question_text,
-                } if utt.original_question_text else None,
+                }
+                if utt.original_question_text
+                else None,
                 "context_question": {
                     "speaker": utt.context_question_speaker,
                     "text": utt.original_context_question_text,
-                } if utt.original_context_question_text else None,
+                }
+                if utt.original_context_question_text
+                else None,
             },
         }
 
@@ -313,19 +320,16 @@ class HansardRetrievalTool:
         """Get a list of distinct speaker names and person IDs from the database for a user written person name."""
         with Session(self.engine) as session:
             # Subquery to get the latest membership per person
-            latest_membership = (
-                select(
-                    Membership.person_id,
-                    Membership.party,
-                    func.row_number()
-                    .over(
-                        partition_by=Membership.person_id,
-                        order_by=desc(Membership.start_date),
-                    )
-                    .label("rn"),
+            latest_membership = select(
+                Membership.person_id,
+                Membership.party,
+                func.row_number()
+                .over(
+                    partition_by=Membership.person_id,
+                    order_by=desc(Membership.start_date),
                 )
-                .subquery()
-            )
+                .label("rn"),
+            ).subquery()
 
             stmt = (
                 select(Person.id, Person.display_name, latest_membership.c.party)
@@ -349,7 +353,7 @@ class HansardRetrievalTool:
             }
             for row in rows
         ]
-    
+
     def get_mp_voting_record(
         self,
         person_id: int,
@@ -394,14 +398,18 @@ class HansardRetrievalTool:
                 .where(
                     MPPolicySummary.person_id == person_id,
                     MPPolicySummary.name.ilike(f"%{search_term}%"),
-                    MPPolicySummary.period_id == latest_period_id,  # 👈 latest in-filter period
+                    MPPolicySummary.period_id
+                    == latest_period_id,  # 👈 latest in-filter period
                 )
                 .distinct(MPPolicySummary.person_id, MPPolicySummary.name)
                 .order_by(
                     MPPolicySummary.person_id,
                     MPPolicySummary.name,
                     desc(MPPolicySummary.mp_policy_alignment_score),
-                    desc(MPPolicySummary.num_votes_same + MPPolicySummary.num_votes_different),
+                    desc(
+                        MPPolicySummary.num_votes_same
+                        + MPPolicySummary.num_votes_different
+                    ),
                 )
                 .limit(limit)
             )
@@ -418,27 +426,36 @@ class HansardRetrievalTool:
             actual_votes = num_same + num_different
             total_opportunities = actual_votes + num_absent + num_abstain
 
-            results.append({
-                "person_id": row.person_id,
-                "policy_name": row.name,
-                "policy_description": row.policy_description,
-                "context_description": row.context_description,
-                "mp_stance_label": row.mp_stance_label,
-                "mp_policy_alignment_score": row.mp_policy_alignment_score,
-                "num_votes_same": row.num_votes_same,
-                "num_strong_votes_same": row.num_strong_votes_same,
-                "num_votes_different": row.num_votes_different,
-                "num_strong_votes_different": row.num_strong_votes_different,
-                "num_votes_absent": row.num_votes_absent,
-                "num_strong_votes_absent": row.num_strong_votes_absent,
-                "num_votes_abstain": row.num_votes_abstain,
-                "num_strong_votes_abstain": row.num_strong_votes_abstain,
-                "total_votes": actual_votes,
-                "total_opportunities": total_opportunities,
-                "percent_aligned": round(num_same / actual_votes * 100, 1) if actual_votes else 0,
-                "percent_opposed": round(num_different / actual_votes * 100, 1) if actual_votes else 0,
-                "percent_absent": round(num_absent / total_opportunities * 100, 1) if total_opportunities else 0,
-                "percent_abstain": round(num_abstain / total_opportunities * 100, 1) if total_opportunities else 0,
-            })
+            results.append(
+                {
+                    "person_id": row.person_id,
+                    "policy_name": row.name,
+                    "policy_description": row.policy_description,
+                    "context_description": row.context_description,
+                    "mp_stance_label": row.mp_stance_label,
+                    "mp_policy_alignment_score": row.mp_policy_alignment_score,
+                    "num_votes_same": row.num_votes_same,
+                    "num_strong_votes_same": row.num_strong_votes_same,
+                    "num_votes_different": row.num_votes_different,
+                    "num_strong_votes_different": row.num_strong_votes_different,
+                    "num_votes_absent": row.num_votes_absent,
+                    "num_strong_votes_absent": row.num_strong_votes_absent,
+                    "num_votes_abstain": row.num_votes_abstain,
+                    "num_strong_votes_abstain": row.num_strong_votes_abstain,
+                    "total_votes": actual_votes,
+                    "total_opportunities": total_opportunities,
+                    "percent_aligned": round(num_same / actual_votes * 100, 1)
+                    if actual_votes
+                    else 0,
+                    "percent_opposed": round(num_different / actual_votes * 100, 1)
+                    if actual_votes
+                    else 0,
+                    "percent_absent": round(num_absent / total_opportunities * 100, 1)
+                    if total_opportunities
+                    else 0,
+                    "percent_abstain": round(num_abstain / total_opportunities * 100, 1)
+                    if total_opportunities
+                    else 0,
+                }
+            )
         return results
-

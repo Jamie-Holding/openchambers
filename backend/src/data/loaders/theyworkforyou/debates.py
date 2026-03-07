@@ -17,7 +17,12 @@ logger = logging.getLogger(__name__)
 class Debates(BaseLoader):
     """Loader for TheyWorkForYou Hansard XML files."""
 
-    def __init__(self, source_path: str, start_date: str | None = None, end_date: str | None = None) -> None:
+    def __init__(
+        self,
+        source_path: str,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> None:
         """Initialise the debates loader.
 
         Args:
@@ -48,7 +53,7 @@ class Debates(BaseLoader):
             if no files remain.
         """
         start = batch_number * batch_size
-        batch_files = self.files[start:start + batch_size]
+        batch_files = self.files[start : start + batch_size]
         if not batch_files:
             return pd.DataFrame()  # no more batches
 
@@ -96,7 +101,7 @@ class Debates(BaseLoader):
             "current_context_question",
             "current_context_question_id",
             "current_context_question_speaker",
-            "current_context_question_type"
+            "current_context_question_type",
         ]
         context = {col: None for col in context_columns}
 
@@ -150,13 +155,17 @@ class Debates(BaseLoader):
                 is_main_question = speech_type == "Start Question"
                 is_supplementary_question = speech_type == "Start SupplementaryQuestion"
                 is_intervention = speech_type == "Start Intervention"
-                is_question = is_main_question or is_supplementary_question or is_intervention
+                is_question = (
+                    is_main_question or is_supplementary_question or is_intervention
+                )
                 # Continuation speech after an intervention is also an answer
                 is_continuation_after_intervention = (
                     speech_type == "Continuation Speech"
                     and context["current_context_question_type"] == "intervention"
                 )
-                is_answer = "Answer" in speech_type or is_continuation_after_intervention
+                is_answer = (
+                    "Answer" in speech_type or is_continuation_after_intervention
+                )
 
                 # Update context based on speech type
                 if is_statement:
@@ -184,20 +193,23 @@ class Debates(BaseLoader):
                     # Supplementary question: update context question, keep main question
                     context["current_context_question"] = speech_text
                     context["current_context_question_id"] = elem.get("id")
-                    context["current_context_question_speaker"] = elem.get("speakername")
+                    context["current_context_question_speaker"] = elem.get(
+                        "speakername"
+                    )
                     context["current_context_question_type"] = "supplementary"
                 elif is_intervention:
                     # Intervention: update context question, keep main question
                     context["current_context_question"] = speech_text
                     context["current_context_question_id"] = elem.get("id")
-                    context["current_context_question_speaker"] = elem.get("speakername")
+                    context["current_context_question_speaker"] = elem.get(
+                        "speakername"
+                    )
                     context["current_context_question_type"] = "intervention"
 
                 record = {
                     # File metadata.
                     "xml_path": xml_path,
                     "date": self._extract_date(xml_path),
-
                     # Speech attributes.
                     "speech_id": elem.get("id"),
                     "speakername": elem.get("speakername"),
@@ -209,7 +221,6 @@ class Debates(BaseLoader):
                     "url": elem.get("url"),
                     "oral_qnum": elem.get("oral-qnum"),
                     "nospeaker": elem.get("nospeaker"),
-
                     # Statement/Question/Answer tracking.
                     "is_statement": is_statement,
                     "is_question": is_question,
@@ -225,23 +236,24 @@ class Debates(BaseLoader):
                     "question_speaker": context["current_question_speaker"],
                     "context_question_text": context["current_context_question"],
                     "context_question_id": context["current_context_question_id"],
-                    "context_question_speaker": context["current_context_question_speaker"],
+                    "context_question_speaker": context[
+                        "current_context_question_speaker"
+                    ],
                     "context_question_type": context["current_context_question_type"],
-
                     # Original versions (before any summarization)
                     "original_statement_text": context["current_statement"],
                     "original_question_text": context["current_question"],
-                    "original_context_question_text": context["current_context_question"],
-
+                    "original_context_question_text": context[
+                        "current_context_question"
+                    ],
                     # Parent context.
                     "oral_heading": context["oral_heading"],
                     "major_heading": context["major_heading"],
                     "minor_heading": context["minor_heading"],
-
                     # Speech content.
                     "utterance": speech_text,
                     "original_utterance": speech_text,
-                    "num_paragraphs": len(paragraphs)
+                    "num_paragraphs": len(paragraphs),
                 }
 
                 records.append(record)
@@ -251,7 +263,7 @@ class Debates(BaseLoader):
 
         if df.empty:
             return df
-        
+
         if "nospeaker" in df.columns:
             df = df[df["nospeaker"] != "true"].reset_index(drop=True)
 

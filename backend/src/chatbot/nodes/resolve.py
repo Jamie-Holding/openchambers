@@ -13,8 +13,9 @@ from src.chatbot.state import AgentState
 from src.chatbot.utils import hansard_tool
 
 
-def _merge_context(active_context: ActiveContext, context_update: ContextUpdate,
-                   intent: str) -> ActiveContext:
+def _merge_context(
+    active_context: ActiveContext, context_update: ContextUpdate, intent: str
+) -> ActiveContext:
     """Merge classifier output into active context based on intent."""
     if intent == "new_query":
         return ActiveContext(
@@ -63,14 +64,17 @@ def _resolve_people(active_context: ActiveContext) -> tuple[ActiveContext, str |
         else:
             # Ambiguous name - ask user to clarify.
             options = format_person_options(matches)
-            return active_context, PERSON_DISAMBIGUATION.format(name=name, options=options)
+            return active_context, PERSON_DISAMBIGUATION.format(
+                name=name, options=options
+            )
 
     updated = active_context.model_copy(update={"person_ids": person_ids})
     return updated, None
 
 
-def _resolve_person_disambiguation(active_context: ActiveContext,
-                                   user_message: str) -> tuple[ActiveContext, str | None]:
+def _resolve_person_disambiguation(
+    active_context: ActiveContext, user_message: str
+) -> tuple[ActiveContext, str | None]:
     """Resolve a person disambiguation answer (number or name) to a person ID."""
     if not active_context.person_names or active_context.person_ids:
         return active_context, None
@@ -86,22 +90,24 @@ def _resolve_person_disambiguation(active_context: ActiveContext,
         # Try parsing as a number selection
         idx = int(text) - 1 if text.isdigit() else None
         if idx is not None and 0 <= idx < len(matches):
-            updated = active_context.model_copy(update={
-                "person_ids": [matches[idx]["person_id"]],
-                "person_names": [matches[idx]["display_name"]],
-            })
+            updated = active_context.model_copy(
+                update={
+                    "person_ids": [matches[idx]["person_id"]],
+                    "person_names": [matches[idx]["display_name"]],
+                }
+            )
             return updated, None
 
         # Try matching by name - only accept if exactly one match
         text_lower = text.lower()
-        name_matches = [
-            m for m in matches if text_lower in m["display_name"].lower()
-        ]
+        name_matches = [m for m in matches if text_lower in m["display_name"].lower()]
         if len(name_matches) == 1:
-            updated = active_context.model_copy(update={
-                "person_ids": [name_matches[0]["person_id"]],
-                "person_names": [name_matches[0]["display_name"]],
-            })
+            updated = active_context.model_copy(
+                update={
+                    "person_ids": [name_matches[0]["person_id"]],
+                    "person_names": [name_matches[0]["display_name"]],
+                }
+            )
             return updated, None
 
         # Ambiguous or invalid answer - ask again
@@ -137,7 +143,9 @@ async def resolve_node(state: AgentState) -> dict:
     # Merge classifier output or handle disambiguation answer
     if intent == "answer_to_question":
         user_message = state["messages"][-1].content
-        active_context, ask_msg = _resolve_person_disambiguation(active_context, user_message)
+        active_context, ask_msg = _resolve_person_disambiguation(
+            active_context, user_message
+        )
         if ask_msg:
             return _ask(active_context, ask_msg)
     else:

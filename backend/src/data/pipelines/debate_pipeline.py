@@ -43,7 +43,9 @@ class DebatePipeline:
             checkpoint_path: Path for checkpoint file.
         """
         self.data_dir = data_dir
-        self.loader = Debates(source_path=data_dir, start_date=start_date, end_date=end_date)
+        self.loader = Debates(
+            source_path=data_dir, start_date=start_date, end_date=end_date
+        )
         self.repository = repository
         self.transformers = transformers or []
         self.embedding_model = embedding_model
@@ -62,9 +64,11 @@ class DebatePipeline:
             try:
                 data = json.loads(checkpoint.read_text())
                 processed = set(data.get("processed_files", []))
-                logger.info(f"Loaded checkpoint: {len(processed)} files already processed")
+                logger.info(
+                    f"Loaded checkpoint: {len(processed)} files already processed"
+                )
                 return processed
-            except (json.JSONDecodeError, IOError) as e:
+            except (OSError, json.JSONDecodeError) as e:
                 logger.warning(f"Failed to load checkpoint: {e}. Starting fresh.")
         return set()
 
@@ -72,7 +76,9 @@ class DebatePipeline:
         """Save the set of processed files to checkpoint."""
         checkpoint = Path(self.checkpoint_path)
         checkpoint.parent.mkdir(parents=True, exist_ok=True)
-        checkpoint.write_text(json.dumps({"processed_files": list(self._processed_files)}))
+        checkpoint.write_text(
+            json.dumps({"processed_files": list(self._processed_files)})
+        )
 
     def clear_checkpoint(self) -> None:
         """Clear the checkpoint file to start fresh."""
@@ -93,7 +99,9 @@ class DebatePipeline:
         total_utterances = 0
         failed_batches = 0
 
-        for batch_number, batch_df in enumerate(self.loader.iter_batches(self.batch_size)):
+        for batch_number, batch_df in enumerate(
+            self.loader.iter_batches(self.batch_size)
+        ):
             # Get unique files in this batch to check against checkpoint.
             batch_files = set(batch_df["xml_path"].unique())
 
@@ -109,7 +117,9 @@ class DebatePipeline:
             if batch_df.empty:
                 continue
 
-            logger.info(f"Processing batch {batch_number} ({len(batch_df)} utterances from {len(new_files)} files)")
+            logger.info(
+                f"Processing batch {batch_number} ({len(batch_df)} utterances from {len(new_files)} files)"
+            )
 
             try:
                 # Apply transformers.

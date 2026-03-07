@@ -22,7 +22,6 @@ def rrf():
 
 
 class TestReciprocalRankFusion:
-
     def test_single_list(self, rrf):
         results = rrf([_utt(1), _utt(2), _utt(3)])
         assert [u.id for u in results] == [1, 2, 3]

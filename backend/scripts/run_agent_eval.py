@@ -79,11 +79,13 @@ async def main():
                 turn_result["error"] = error
             turn_results.append(turn_result)
 
-        results.append({
-            "id": case_id,
-            "description": case["description"],
-            "turns": turn_results,
-        })
+        results.append(
+            {
+                "id": case_id,
+                "description": case["description"],
+                "turns": turn_results,
+            }
+        )
 
     # Save results
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

@@ -1,6 +1,6 @@
 """Unit and integration tests for the dates module."""
 
-from datetime import date, timedelta
+from datetime import date
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -16,6 +16,7 @@ MOCK_TODAY_STR = "2025-03-15"
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 class FakeDate(date):
     """date subclass with a controllable today()."""
@@ -48,8 +49,8 @@ def mock_llm(monkeypatch):
 # parse_dates_regex - pure functions, frozen date
 # ---------------------------------------------------------------------------
 
-class TestParseDatesRegex:
 
+class TestParseDatesRegex:
     def test_in_year(self, freeze_date):
         assert parse_dates_regex("in 2025") == ("2025-01-01", "2025-12-31")
 
@@ -90,8 +91,8 @@ class TestParseDatesRegex:
 # parse_dates - async orchestrator
 # ---------------------------------------------------------------------------
 
-class TestParseDates:
 
+class TestParseDates:
     @pytest.mark.asyncio
     async def test_none_input(self):
         result = await parse_dates(None)
@@ -110,7 +111,9 @@ class TestParseDates:
         mock_llm.ainvoke.return_value = DateRange(
             date_from="2024-01-01", date_to="2024-03-31"
         )
-        date_from, date_to, ask_msg = await parse_dates("between january and march 2024")
+        date_from, date_to, ask_msg = await parse_dates(
+            "between january and march 2024"
+        )
         assert date_from == "2024-01-01"
         assert date_to == "2024-03-31"
         assert ask_msg is None
@@ -128,9 +131,9 @@ class TestParseDates:
 # Integration tests (real LLM - run with: pytest -m integration)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.integration
 class TestParseDatesIntegration:
-
     @pytest.mark.asyncio
     async def test_llm_fallback_parses_complex_expression(self):
         date_from, date_to, ask_msg = await parse_dates(

@@ -20,16 +20,20 @@ class Metadata:
         """
         self.metadata_dir = metadata_dir
         self.PEOPLE_PATH = os.path.join(self.metadata_dir, "people.json")
-        self.MEMBERSHIPS_PATH = os.path.join(self.metadata_dir, "people.json") # Note: same file as people.
+        self.MEMBERSHIPS_PATH = os.path.join(
+            self.metadata_dir, "people.json"
+        )  # Note: same file as people.
         self.VOTES_PATH = os.path.join(self.metadata_dir, "votes.parquet")
         self.DIVISIONS_PATH = os.path.join(self.metadata_dir, "divisions.parquet")
         self.POLICIES_PATH = os.path.join(self.metadata_dir, "policies.json")
-        self.POLICY_CALCS_PATH = os.path.join(self.metadata_dir, "policy_calc_to_load.parquet")
+        self.POLICY_CALCS_PATH = os.path.join(
+            self.metadata_dir, "policy_calc_to_load.parquet"
+        )
         self.PEOPLE_REQUIRED_COLUMNS = [
             "id",
             "given_name",
             "family_name",
-            "display_name"
+            "display_name",
         ]
         self.MEMBERSHIP_REQUIRED_COLUMNS = [
             "membership_id",
@@ -85,7 +89,7 @@ class Metadata:
         Returns:
             Parsed JSON data.
         """
-        with open(path, "r") as f:
+        with open(path) as f:
             return json.load(f)
 
     def load_memberships(self) -> pd.DataFrame:
@@ -100,10 +104,12 @@ class Metadata:
         df = pd.DataFrame(memberships)
 
         # Rename core identifiers.
-        df = df.rename(columns={
-            "id": "membership_id",
-            "on_behalf_of_id": "party",
-        })
+        df = df.rename(
+            columns={
+                "id": "membership_id",
+                "on_behalf_of_id": "party",
+            }
+        )
 
         # Parse dates.
         for col in ("start_date", "end_date"):
@@ -198,16 +204,16 @@ class Metadata:
 
         # Extract given_name.
         given_name = (
-                record.get("given_name")
-                or record.get("additional_name")
-                or (record.get("name").split()[0] if record.get("name") else None)
+            record.get("given_name")
+            or record.get("additional_name")
+            or (record.get("name").split()[0] if record.get("name") else None)
         )
 
         # Extract family_name.
         family_name = (
-                record.get("family_name")
-                or record.get("surname")
-                or (record.get("name").split()[-1] if record.get("name") else None)
+            record.get("family_name")
+            or record.get("surname")
+            or (record.get("name").split()[-1] if record.get("name") else None)
         )
 
         # Build display_name.
@@ -234,12 +240,14 @@ class Metadata:
         data = self._load_json(self.PEOPLE_PATH)
         people = data["persons"]
         people = pd.DataFrame(people)
-        people = people[~people["other_names"].isnull()] # Remove records without a name.
+        people = people[
+            ~people["other_names"].isnull()
+        ]  # Remove records without a name.
 
         # Parse the most appropriate up-to-date names from the json structure.
         people[["given_name", "family_name", "display_name"]] = people.apply(
             lambda row: pd.Series(self._reconcile_person_name(row["other_names"])),
-            axis=1
+            axis=1,
         )
 
         # Extract person ID.
@@ -310,7 +318,9 @@ class Metadata:
             DataFrame with columns matching MP_POLICY_SUMMARY_REQUIRED_COLUMNS.
         """
         policies = self._load_json(self.POLICIES_PATH)
-        policies_df = pd.DataFrame(policies)[["id", "name", "policy_description", "context_description"]]
+        policies_df = pd.DataFrame(policies)[
+            ["id", "name", "policy_description", "context_description"]
+        ]
         policies_df = policies_df.rename(columns={"id": "policy_id"})
 
         # Load policy calculations
@@ -329,7 +339,9 @@ class Metadata:
             ),
             axis=1,
         )
-        df["mp_stance_label"] = df["mp_policy_alignment_score"].apply(self._score_to_stance_label)
+        df["mp_stance_label"] = df["mp_policy_alignment_score"].apply(
+            self._score_to_stance_label
+        )
 
         # Convert division_ids from numpy.int64 to native Python int
         df["division_ids"] = df["division_ids"].apply(

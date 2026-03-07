@@ -54,7 +54,10 @@ def parse_dates_regex(date_text: str) -> tuple[str, str] | None:
             month_num = MONTHS[month_name]
             year = int(m.group(2))
             last_day = calendar.monthrange(year, month_num)[1]
-            return f"{year}-{month_num:02d}-01", f"{year}-{month_num:02d}-{last_day:02d}"
+            return (
+                f"{year}-{month_num:02d}-01",
+                f"{year}-{month_num:02d}-{last_day:02d}",
+            )
 
     return None
 
@@ -71,7 +74,9 @@ async def parse_dates_llm(date_text: str) -> tuple[str, str] | None:
         return None
 
 
-async def parse_dates(date_text: str | None) -> tuple[str | None, str | None, str | None]:
+async def parse_dates(
+    date_text: str | None,
+) -> tuple[str | None, str | None, str | None]:
     """Parse date_text into (date_from, date_to, ask_message).
 
     Returns ask_message if both tiers fail.
