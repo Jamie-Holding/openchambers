@@ -187,6 +187,26 @@ docker compose exec db psql -U hansard_user -d hansard
 
 Database data persists across restarts in a Docker volume. To reset everything: `docker compose down -v`.
 
+### Code quality
+
+Pre-commit hooks enforce linting and formatting on every commit. Install them once after cloning:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+Hooks run automatically on `git commit`. To run them manually against all files:
+
+```bash
+pre-commit run --all-files
+```
+
+- **Python** — [Ruff](https://docs.astral.sh/ruff/) for linting and formatting (configured in `backend/pyproject.toml`)
+- **TypeScript/JS** — ESLint with Next.js presets (configured in `frontend/eslint.config.mjs`)
+
+Keep hook versions up to date with `pre-commit autoupdate`.
+
 ## Tech stack
 
 | Layer | Technologies |
