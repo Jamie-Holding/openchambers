@@ -3,7 +3,7 @@ import logging
 
 from sentence_transformers import SentenceTransformer
 
-from config.settings import EMBEDDING_MODEL_NAME
+from config.settings import EMBEDDING_MODEL_NAME, FAST_LLM_MODEL_NAME
 from src.data.database.utterance import UtteranceRepository
 from src.data.db import init_db, reindex_bm25, reset_db
 from src.data.pipelines.debate_pipeline import DebatePipeline
@@ -69,7 +69,7 @@ if __name__ == "__main__":
         "include_context_question": True,
     }
     statement_summarizer = StatementSummarizer(
-        model="gpt-4o-mini",
+        model=FAST_LLM_MODEL_NAME,
         summarisation_threshold_chars=500,
         cache_path="data/processed/.statement_summaries_cache.json",
         **INCLUDE_CONTEXTS,
