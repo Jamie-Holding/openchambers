@@ -55,6 +55,18 @@ def init_db() -> Engine:
     return engine
 
 
+def reindex_bm25(engine: Engine) -> None:
+    """Rebuild the BM25 index to ensure all data is searchable.
+
+    pg_textsearch BM25 indexes should auto-update on insert, but a
+    defensive reindex after bulk ingestion guarantees consistency.
+    """
+    with engine.connect() as conn:
+        conn.execute(text("REINDEX INDEX utterance_chunk_bm25_idx"))
+        conn.commit()
+    logger.info("BM25 index rebuilt.")
+
+
 def reset_db() -> Engine:
     """Drop all tables and recreate from scratch.
 

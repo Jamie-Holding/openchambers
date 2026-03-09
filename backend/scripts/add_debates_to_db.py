@@ -5,7 +5,7 @@ from sentence_transformers import SentenceTransformer
 
 from config.settings import EMBEDDING_MODEL_NAME
 from src.data.database.utterance import UtteranceRepository
-from src.data.db import init_db, reset_db
+from src.data.db import init_db, reindex_bm25, reset_db
 from src.data.pipelines.debate_pipeline import DebatePipeline
 from src.data.transformers.chunking_transformer import ChunkingTransformer
 from src.data.transformers.embedding_text_formatter import EmbeddingFormatter
@@ -103,5 +103,7 @@ if __name__ == "__main__":
         statement_summarizer.clear_cache()
 
     pipeline.run()
+
+    reindex_bm25(engine)
 
     logger.info("Debate ingestion pipeline completed.")
