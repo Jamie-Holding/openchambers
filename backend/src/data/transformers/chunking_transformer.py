@@ -155,11 +155,21 @@ class ChunkingTransformer(BaseTransformer):
         if not sentences:
             return [{"text": content, "start_char": 0, "end_char": len(original_text)}]
 
+        # Pre-split any oversized sentences by word boundaries
+        expanded = []
+        for sentence in sentences:
+            if self._count_tokens(sentence) > effective_chunk_size:
+                expanded.extend(
+                    self._split_long_sentence(sentence, effective_chunk_size)
+                )
+            else:
+                expanded.append(sentence)
+
         chunks = []
         current_sentences = []
         current_tokens = 0
 
-        for sentence in sentences:
+        for sentence in expanded:
             sentence_tokens = self._count_tokens(sentence)
 
             # If adding this sentence exceeds chunk_size, finalize current chunk
@@ -225,9 +235,39 @@ class ChunkingTransformer(BaseTransformer):
         Returns:
             List of sentences.
         """
-        # Split on sentence-ending punctuation followed by space and capital
-        sentences = re.split(r"(?<=[.!?])\s+(?=[A-Z])", text)
+        # Split on sentence-ending punctuation or semicolons, followed by
+        # whitespace and a capital letter
+        sentences = re.split(r"(?<=[.!?;])\s+(?=[A-Z])", text)
         return [s.strip() for s in sentences if s.strip()]
+
+    def _split_long_sentence(self, sentence: str, max_tokens: int) -> list[str]:
+        """Split an oversized sentence into word-bounded pieces.
+
+        Args:
+            sentence: The sentence to split.
+            max_tokens: Maximum tokens per piece.
+
+        Returns:
+            List of text pieces, each within max_tokens.
+        """
+        words = sentence.split()
+        pieces = []
+        current_words = []
+        current_tokens = 0
+
+        for word in words:
+            word_tokens = self._count_tokens(word)
+            if current_tokens + word_tokens > max_tokens and current_words:
+                pieces.append(" ".join(current_words))
+                current_words = []
+                current_tokens = 0
+            current_words.append(word)
+            current_tokens += word_tokens
+
+        if current_words:
+            pieces.append(" ".join(current_words))
+
+        return pieces
 
     def _format_chunk_embedding(self, chunk_text: str, context: str) -> str:
         """Format a chunk with its context for embedding.
