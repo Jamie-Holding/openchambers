@@ -8,11 +8,11 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies (CPU-only torch via extra index)
-COPY requirements.txt /tmp/requirements.txt
+COPY requirements.txt requirements-dev.txt /tmp/
 RUN pip install --no-cache-dir \
         --extra-index-url https://download.pytorch.org/whl/cpu \
-        -r /tmp/requirements.txt && \
-    rm /tmp/requirements.txt
+        -r /tmp/requirements-dev.txt && \
+    rm /tmp/requirements.txt /tmp/requirements-dev.txt
 
 # Copy backend source (overridden by bind mount in dev)
 COPY . .
