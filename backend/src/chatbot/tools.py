@@ -2,7 +2,7 @@
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
-from sqlalchemy import Float, and_, desc, func, literal, select, type_coerce
+from sqlalchemy import Float, and_, desc, func, literal, select, text, type_coerce
 from sqlalchemy.orm import Session
 
 from src.data.database.models import (
@@ -45,26 +45,33 @@ class HansardRetrievalTool:
             conditions.append(Utterance.date <= date_to)
         return conditions
 
-    def _dedup_and_fetch(self, session, rows) -> list[Utterance]:
-        """Deduplicate (utterance_id, score) rows and fetch Utterance objects."""
+    def _dedup_and_fetch(self, chunk_rows) -> list[Utterance]:
+        """Deduplicate chunk rows by utterance and fetch Utterance objects.
+
+        Args:
+            chunk_rows: List of rows with utterance_id and score attributes.
+        """
         best: dict[int, float] = {}
-        for utterance_id, score in rows:
-            if utterance_id not in best or score < best[utterance_id]:
-                best[utterance_id] = score
+        for row in chunk_rows:
+            if row.utterance_id not in best or row.score < best[row.utterance_id]:
+                best[row.utterance_id] = row.score
 
         top_ids = sorted(best, key=lambda uid: best[uid])[: self.top_k]
         if not top_ids:
             return []
 
-        utterances = {
-            u.id: u
-            for u in session.execute(select(Utterance).where(Utterance.id.in_(top_ids)))
-            .scalars()
-            .all()
-        }
-        return [utterances[uid] for uid in top_ids if uid in utterances]
+        with Session(self.engine) as session:
+            utterances = {
+                u.id: u
+                for u in session.execute(
+                    select(Utterance).where(Utterance.id.in_(top_ids))
+                )
+                .scalars()
+                .all()
+            }
+            return [utterances[uid] for uid in top_ids if uid in utterances]
 
-    def _vector_search(
+    def _vector_search_chunks(
         self,
         query_embedding: np.ndarray,
         party: str | None = None,
@@ -72,20 +79,11 @@ class HansardRetrievalTool:
         date_from: str | None = None,
         date_to: str | None = None,
         min_similarity: float | None = None,
-    ) -> list[Utterance]:
-        """Search using vector similarity (pgvector).
-
-        Args:
-            query_embedding: The query vector to search against.
-            party: Filter by political party.
-            person_id: Filter by speaker's person ID.
-            date_from: Filter by minimum date (inclusive).
-            date_to: Filter by maximum date (inclusive).
-            min_similarity: Minimum cosine similarity threshold (0 to 1).
-                Results below this threshold are excluded.
+    ) -> list[tuple]:
+        """Return raw chunk rows from vector similarity search.
 
         Returns:
-            List of Utterance objects ordered by semantic similarity.
+            List of (chunk_id, chunk_text, embedding_text, utterance_id, score) rows.
         """
         effective_min_sim = (
             min_similarity if min_similarity is not None else self.min_similarity
@@ -93,11 +91,22 @@ class HansardRetrievalTool:
         score_expr = type_coerce(Embedding.embedding.op("<#>")(query_embedding), Float)
 
         with Session(self.engine) as session:
+            # HNSW ef_search controls how many candidates the index explores;
+            # must be >= LIMIT to avoid silently truncating results
+            chunk_limit = self.top_k * 3
+            session.execute(text(f"SET hnsw.ef_search = {chunk_limit}"))
+
             stmt = (
-                select(UtteranceChunk.utterance_id, score_expr.label("score"))
+                select(
+                    UtteranceChunk.id,
+                    UtteranceChunk.chunk_text,
+                    UtteranceChunk.embedding_text,
+                    UtteranceChunk.utterance_id,
+                    score_expr.label("score"),
+                )
                 .join(Embedding, Embedding.chunk_id == UtteranceChunk.id)
                 .order_by("score")
-                .limit(self.top_k * 3)
+                .limit(chunk_limit)
             )
 
             if effective_min_sim is not None:
@@ -109,35 +118,33 @@ class HansardRetrievalTool:
                     Utterance, UtteranceChunk.utterance_id == Utterance.id
                 ).where(and_(*conditions))
 
-            rows = session.execute(stmt).all()
-            return self._dedup_and_fetch(session, rows)
+            return session.execute(stmt).all()
 
-    def _bm25_search(
+    def _bm25_search_chunks(
         self,
         query: str,
         party: str | None = None,
         person_id: int | None = None,
         date_from: str | None = None,
         date_to: str | None = None,
-    ) -> list[Utterance]:
-        """Search using BM25 lexical matching (pg_textsearch).
-
-        Args:
-            query: The search query text.
-            party: Filter by political party.
-            person_id: Filter by speaker's person ID.
-            date_from: Filter by minimum date (inclusive).
-            date_to: Filter by maximum date (inclusive).
+    ) -> list[tuple]:
+        """Return raw chunk rows from BM25 lexical search.
 
         Returns:
-            List of Utterance objects ordered by BM25 relevance.
+            List of (chunk_id, chunk_text, embedding_text, utterance_id, score) rows.
         """
         bm25_query = func.to_bm25query(query, "utterance_chunk_bm25_idx")
         score_expr = UtteranceChunk.chunk_text.op("<@>")(bm25_query)
 
         with Session(self.engine) as session:
             stmt = (
-                select(UtteranceChunk.utterance_id, score_expr.label("score"))
+                select(
+                    UtteranceChunk.id,
+                    UtteranceChunk.chunk_text,
+                    UtteranceChunk.embedding_text,
+                    UtteranceChunk.utterance_id,
+                    score_expr.label("score"),
+                )
                 .order_by(score_expr)
                 .limit(self.top_k * 3)
             )
@@ -148,8 +155,17 @@ class HansardRetrievalTool:
                     Utterance, UtteranceChunk.utterance_id == Utterance.id
                 ).where(and_(*conditions))
 
-            rows = session.execute(stmt).all()
-            return self._dedup_and_fetch(session, rows)
+            return session.execute(stmt).all()
+
+    def _vector_search(self, query_embedding, **kwargs) -> list[Utterance]:
+        """Search using vector similarity, deduplicated to utterances."""
+        return self._dedup_and_fetch(
+            self._vector_search_chunks(query_embedding, **kwargs)
+        )
+
+    def _bm25_search(self, query, **kwargs) -> list[Utterance]:
+        """Search using BM25, deduplicated to utterances."""
+        return self._dedup_and_fetch(self._bm25_search_chunks(query, **kwargs))
 
     def _reciprocal_rank_fusion(
         self,
