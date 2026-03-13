@@ -25,6 +25,10 @@ backend/data/**
 .coverage
 htmlcov/
 
+# Eval results
+backend/eval/results/*
+!backend/eval/results/.gitkeep
+
 # Type checking
 .mypy_cache/
 
