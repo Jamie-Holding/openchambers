@@ -90,6 +90,7 @@ openchambers/
 │   │       ├── loaders/      # XML and metadata parsers
 │   │       ├── pipelines/    # Batch ingestion orchestration
 │   │       └── transformers/ # Summarization, formatting, chunking
+│   ├── eval/                 # Retrieval evaluation harness and results
 │   ├── scripts/              # CLI scripts for data ingestion
 │   └── data/                 # Raw data directory
 │       └── hansard/
@@ -228,10 +229,32 @@ This project uses open data from:
 
 All data is made available under open licenses by these organizations. This project is not affiliated with TheyWorkForYou or mySociety.
 
+## Evaluation
+
+The retrieval pipeline is evaluated using 50 topic-based queries over Q1 2025 debates.
+
+For each query, we retrieve the top 200 chunks from both vector and BM25 search as a wide initial candidate set. These are then scored 1-5 by an LLM judge which is used for calculating nDCG@k and recall@k.
+
+To ensure the LLM judge is accurate, 200 random examples (stratified by judge score) were manually labelled and compared. The results showed a 70.5% exact match between the LLM judge and the human judge and, encouragingly, 92.5% within ±1.
+
+This suggests that the LLM judge is likely good enough to be trusted on the wider eval and as a continuous evaluation measure for future retreival changes.
+
+**Results:**
+
+| Method | NDCG@5 | NDCG@10 | NDCG@50 | Recall@50 | Recall@200 |
+|--------|--------|---------|---------|-----------|------------|
+| Vector | 0.750 | 0.743 | 0.756 | 0.287 | 0.709 |
+| BM25 | 0.744 | 0.752 | 0.775 | 0.314 | 0.731 |
+| **RRF** | **0.780** | **0.781** | **0.805** | **0.327** | **0.804** |
+
+**Takeaway:**
+
+RRF fusion consistently outperforms both individual methods. Vector performs best at the very top of results while BM25 wins on wider retrieval sets. Full results, methodology, and judge calibration details in [backend/eval/README.md](backend/eval/README.md).
+
 ## Future improvements
-- Formalise evaluation: build a small labelled query set and measure retrieval quality (Precision@k / Recall@k / nDCG).
 - Reduce retrieval-led hallucinations: tune similarity thresholds and add a reranking step (cross-encoder or LLM-judge) prior to generation.
 - Context management: cap and/or summarise chat history and retrieved context to stay within token limits.
+- Run the LLM-judge eval on a wider set of longer, more diverse queries.
 
 ## License
 
