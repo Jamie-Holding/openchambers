@@ -1,5 +1,7 @@
 """Hansard retrieval tools for semantic search and metadata lookup."""
 
+from datetime import date
+
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from sqlalchemy import Float, and_, desc, func, literal, select, text, type_coerce
@@ -40,9 +42,9 @@ class HansardRetrievalTool:
         if person_id:
             conditions.append(Utterance.person_id == person_id)
         if date_from:
-            conditions.append(Utterance.date >= date_from)
+            conditions.append(Utterance.date >= date.fromisoformat(date_from))
         if date_to:
-            conditions.append(Utterance.date <= date_to)
+            conditions.append(Utterance.date <= date.fromisoformat(date_to))
         return conditions
 
     def _dedup_and_fetch(self, chunk_rows) -> list[Utterance]:
